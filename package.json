@@ -1,0 +1,11 @@
+{
+  "name": "epics",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Epics (ClassMind app): accounts, email verification, video transcripts, summaries, quizzes, task alerts",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "demo": "node --disable-warning=ExperimentalWarning server.js --demo"
+  },
+  "engines": { "node": ">=22.5" }
+}

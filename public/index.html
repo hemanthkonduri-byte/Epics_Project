@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ClassMind – Meetings & Video Summaries</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f5f3ee;--card:rgba(255,255,255,.86);--tx:#1f2937;--mut:#6b7280;--ac:#2f4468;--ac2:#5f7fa8;--bd:rgba(47,68,104,.16);--ok:#12a36b;--bad:#c2410c;--p:#2f4468}
+:root[data-theme="dark"]{--bg:#070816;--card:rgba(20,22,48,.62);--tx:#eef0ff;--mut:#9aa0c8;--ac:#7c7cff;--ac2:#2be0e8;--bd:rgba(124,124,255,.3);--p:#7c7cff}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow-x:hidden}
+#gl{position:fixed;inset:0;z-index:0;width:100%;height:100%}
+.glass{background:var(--card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:18px}
+h1,h2,h3{margin:0}
+button,input,select{font:inherit;color:inherit}
+.btn{border:0;cursor:pointer;padding:11px 18px;border-radius:12px;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-weight:600;transition:transform .2s,box-shadow .2s;box-shadow:0 6px 20px -6px var(--ac)}
+.btn:hover{transform:translateY(-2px) scale(1.02)}
+.btn.g{background:transparent;border:1px solid var(--bd);color:var(--tx);box-shadow:none}
+.btn.r{background:var(--bad);box-shadow:none}
+input,select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--card);outline:none;margin:6px 0}
+input:focus{border-color:var(--ac)}
+.view{position:relative;z-index:1;min-height:100%}
+#auth{display:grid;grid-template-columns:1.15fr 1fr;min-height:100vh;transition:opacity .55s,transform .55s,filter .55s}
+#auth.out{opacity:0;transform:scale(1.05);filter:blur(8px);pointer-events:none}
+.hero{padding:6vw 5vw;display:flex;flex-direction:column;justify-content:center;gap:16px}
+.hero h1{font-size:clamp(28px,3.4vw,46px);line-height:1.12;font-weight:800;letter-spacing:-.02em}
+.feat{display:flex;gap:12px;align-items:flex-start}
+.fl3{position:relative;height:160px;max-width:480px}.fm{position:absolute;padding:10px 14px;border-radius:14px;font-size:13px;animation:fy 6s ease-in-out infinite}
+@keyframes fy{50%{transform:translateY(-10px)}}
+.fwrap{display:flex;align-items:center;justify-content:center;padding:24px}.mb{display:none}
+#app.inn{animation:appin .8s cubic-bezier(.2,.8,.2,1)}@keyframes appin{from{opacity:0;transform:translateY(26px) scale(.98)}}
+@media(max-width:860px){#auth{grid-template-columns:1fr}.hero{display:none}.mb{display:block}}
+.box{width:100%;max-width:420px;padding:28px;transform-style:preserve-3d;transition:transform .15s}
+.brand{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--ac),var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tabs{display:flex;gap:6px;margin:16px 0}.tabs button{flex:1}
+.tabs .on{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:0}
+.mut{color:var(--mut);font-size:14px}
+#app{display:none;min-height:100vh}
+.side{position:fixed;left:0;top:0;bottom:0;width:230px;padding:20px 14px;display:flex;flex-direction:column;gap:6px;border-radius:0 18px 18px 0;z-index:3}
+.nav{background:none;border:0;text-align:left;padding:12px 14px;border-radius:12px;cursor:pointer;color:var(--mut);font-weight:600}
+.nav.on,.nav:hover{background:var(--bd);color:var(--tx)}
+main{margin-left:230px;padding:24px;max-width:1100px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{padding:20px;margin-bottom:16px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;background:var(--bd);font-size:12px;font-weight:700}
+.drop{border:2px dashed var(--bd);border-radius:18px;padding:34px;text-align:center;cursor:pointer}
+.bar{height:8px;border-radius:9px;background:var(--bd);overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .3s}
+.opt{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 14px;border-radius:12px;border:1px solid var(--bd);background:transparent;cursor:pointer}
+.opt.ok{border-color:var(--ok);background:rgba(18,163,107,.18)}.opt.no{border-color:var(--bad);background:rgba(217,69,95,.18)}
+.tile{aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;flex-direction:column;border-radius:16px;font-weight:700;position:relative;overflow:hidden}
+.av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:20px;margin-bottom:6px}
+.tile.sp{box-shadow:0 0 0 3px var(--ac2),0 0 28px var(--ac2)}
+#tr{height:240px;overflow:auto;font-size:14px}#tr p{margin:6px 0}
+.bn{display:none}
+#toast{position:fixed;right:16px;top:calc(14px + env(safe-area-inset-top,0px));z-index:9;padding:12px 16px;display:none;max-width:320px}
+@media(max-width:760px){
+.side{top:auto;width:100%;height:auto;flex-direction:row;padding:6px;border-radius:18px 18px 0 0;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+.nav{flex:1;text-align:center;padding:10px 4px;font-size:12px}.brandS{display:none}
+main{margin:0;padding:14px 14px 90px}}
+.rv{opacity:0;transform:translateY(30px) scale(.96);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+.rv.in{opacity:1;transform:none}.card.in:hover{transform:translateY(-5px);box-shadow:0 18px 38px -16px var(--ac)}
+.ic{width:38px;height:38px;border-radius:11px;background:var(--bd);display:inline-flex;align-items:center;justify-content:center;margin-right:10px;vertical-align:middle}
+.btn{position:relative;overflow:hidden}.rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.55);transform:scale(0);animation:rp .6s linear;pointer-events:none}@keyframes rp{to{transform:scale(4);opacity:0}}
+.tile:last-child{animation:pop .5s}@keyframes pop{from{opacity:0;transform:scale(.8)}}
+.fl{perspective:700px}.fc{height:120px;position:relative;transform-style:preserve-3d;transition:transform .6s;cursor:pointer}.fc.on{transform:rotateY(180deg)}
+.fc>div{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;padding:14px;border-radius:14px;border:1px solid var(--bd);display:flex;align-items:center;font-size:14px;background:var(--card)}.fc>div+div{transform:rotateY(180deg);background:var(--bd)}
+#ask{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:8}
+#ap{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:min(360px,calc(100% - 32px));padding:14px;z-index:8;display:none}
+details{padding:12px 0;border-bottom:1px solid var(--bd)}summary{cursor:pointer}
+@media(max-width:760px){#ask{bottom:calc(76px + env(safe-area-inset-bottom,0px))}#ap{bottom:calc(132px + env(safe-area-inset-bottom,0px))}}
+</style></head><body>
+<canvas id="gl"></canvas>
+
+<div id="auth" class="view">
+<div class="hero"><div class="brand">ClassMind</div>
+<h1>Every word of every class,<br>captured and understood.</h1>
+<p class="mut" style="max-width:460px;margin:0">Upload a recording or hold a live meeting. Get the complete transcript, a summary, quizzes and task reminders.</p>
+<div class="feat"><span class="ic">🎙</span><div><b>Word-for-word transcripts</b><div class="mut">Every spoken word, labelled with the speaker's ID.</div></div></div>
+<div class="feat"><span class="ic">📝</span><div><b>Quizzes at three levels</b><div class="mut">Easy, medium and hard, built from the lesson itself.</div></div></div>
+<div class="feat"><span class="ic">✉</span><div><b>Task alerts by email</b><div class="mut">Deadlines mentioned in class reach your inbox.</div></div></div>
+<div class="fl3"><div class="fm glass" style="left:0;top:8px">🎙 SPK-01: So, in an order list…</div><div class="fm glass" style="left:230px;top:58px;animation-delay:-2s">✅ Quiz ready · 15 questions</div><div class="fm glass" style="left:30px;top:108px;animation-delay:-4s">✉ Alert queued for tomorrow</div></div></div>
+<div class="fwrap"><div class="box glass" id="box">
+<div class="brand mb">ClassMind</div><h2>Welcome</h2><p class="mut" style="margin:4px 0 0">Sign in or create your account. Press Enter to continue.</p>
+<div class="tabs"><button class="btn g on" id="tN">New user</button><button class="btn g" id="tR">Existing user</button></div>
+<input id="nm" placeholder="Full name" autocomplete="name">
+<input id="em" type="email" placeholder="Email address (college mail works)" autocomplete="email"><div id="eh" class="mut" style="min-height:18px"></div>
+<div style="position:relative"><input id="pw" type="password" placeholder="Password (min 6 characters)" autocomplete="current-password"><button type="button" id="pe" class="nav" style="position:absolute;right:6px;top:9px;padding:4px 8px" aria-label="Show password">👁</button></div>
+<div id="sg" style="display:none;margin:-6px 0 8px"></div>
+<select id="rl"><option value="host">I am a Host (teacher / organiser)</option><option value="part">I am a Participant (student / attendee)</option></select>
+<label class="mut" style="display:flex;gap:8px;align-items:center;margin:2px 0"><input type="checkbox" id="rm" checked style="width:auto;margin:0"> Remember me on this device</label>
+<p id="er" class="mut" style="color:var(--bad);min-height:18px"></p>
+<button class="btn" id="go" style="width:100%">Create account</button>
+<div id="vf" style="display:none"><p class="mut">We sent a 6-digit code to <b id="ve"></b>. Enter it to confirm this email is real.</p><input id="cd" inputmode="numeric" maxlength="6" placeholder="6-digit code"><button class="btn" id="vb" style="width:100%">Verify & continue</button></div>
+</div></div></div>
+
+<div id="app" class="view">
+<nav class="side glass"><div class="brand brandS" style="padding:6px 10px 14px">ClassMind</div>
+<button class="nav on" data-v="v0">🏠 Home</button><button class="nav" data-v="v1">🎬 Analyze</button><button class="nav" data-v="v2">📹 Meeting</button><button class="nav" data-v="v4">❓ Help</button><button class="nav" data-v="v3">⚙ Account</button></nav>
+<main>
+<section id="v0"><h2>Welcome, <span id="hn"></span> 👋</h2><p class="mut">Everything for classes and meetings. Tap any card to start.</p>
+<div class="grid">
+<div class="card glass"><h3><span class="ic">🎬</span>Analyze a video</h3><p class="mut">Upload a class recording and get a speaker-wise transcript, summary, key points, 15-question quiz, flashcards and task alerts.</p><button class="btn" data-go="v1">Open Analyzer</button></div>
+<div class="card glass"><h3><span class="ic">📹</span><span id="hm">Meetings</span></h3><p class="mut">Hosts create locked rooms and share a code. Participants join with the code and see a live transcript with names.</p><button class="btn" data-go="v2">Open Meeting</button></div>
+<div class="card glass"><h3><span class="ic">✉</span>Task alerts</h3><p class="mut">Deadlines spoken in class, like “submit by Friday”, are pulled out and emailed so nothing is missed.</p><button class="btn g" data-go="v4">How it works</button></div>
+<div class="card glass"><h3><span class="ic">🎓</span>College email</h3><p class="mut">Use .edu, .ac.in or any college mail. A 6-digit code proves the address is real before the account is created.</p><button class="btn g" data-go="v4">Learn more</button></div>
+<div class="card glass"><h3><span class="ic">🔒</span>Security</h3><p class="mut">Encrypted rooms, host-approved entry, room lock and removal of disruptive users.</p><button class="btn g" data-go="v4">Security tips</button></div>
+<div class="card glass"><h3><span class="ic">⚙</span>Account</h3><p class="mut">Switch between Host and Participant, change theme, or log out.</p><button class="btn g" data-go="v3">Open Account</button></div>
+</div></section>
+<section id="v1" style="display:none">
+<h2>Video Analyzer</h2><p class="mut">Upload a class or meeting recording to get a summary, key points, quiz and task alerts.</p>
+<div class="card glass"><label class="drop" id="dz" style="display:block">⬆ Tap to choose a video<br><span class="mut">MP4, MOV, WEBM</span><input id="fl" type="file" accept="video/*" hidden></label>
+<div id="pg" style="display:none"><b id="pt">Transcribing…</b><div class="bar"><i id="pb"></i></div></div></div>
+<div id="res" style="display:none"><div class="card glass" id="bn" style="border-color:var(--bad)">⚠ <b>Demo result.</b> The transcript below is the complete text (5,380 characters) read from your sample recording. Its one voice is labelled with speaker ID SPK-01 because no name appears in it; in the live app this is the participant's account ID. The quiz and flashcards are written from that text. A different video needs the backend speech-to-text to produce its own transcript.</div>
+<div class="grid"><div class="card glass"><h3>Summary</h3><p id="sm"></p><span class="pill">⏱ processed in <span id="tm"></span>s</span><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn g" id="cs">📋 Copy summary</button><button class="btn g" id="ca">✉ Send all alerts</button></div></div>
+<div class="card glass"><h3>Speakers</h3><div id="sp"></div></div></div>
+<div class="grid"><div class="card glass"><h3><span class="ic">💡</span>Key points</h3><ul id="kp"></ul></div>
+<div class="card glass"><h3><span class="ic">✅</span>Tasks & deadlines</h3><div id="tk"></div></div><div class="card glass"><h3><span class="ic">📈</span>Important insights</h3><ul id="ins"></ul></div></div>
+<div class="card glass"><h3><span class="ic">💬</span>Full speaker-wise transcript</h3><button class="btn g" id="tt" style="margin-bottom:8px">Show / hide</button><div id="ft" style="max-height:560px;overflow:auto"></div></div>
+<div class="card glass"><h3><span class="ic">📝</span>Quiz (15 questions) <span class="pill" id="sc"></span></h3><div class="tabs" id="qt"></div><div id="qb"></div></div><div class="card glass"><h3><span class="ic">🃏</span>Flashcards</h3><p class="mut">Tap a card to flip it.</p><div class="grid" id="fcs"></div></div>
+</div></section>
+
+<section id="v2" style="display:none">
+<h2>Live Meeting</h2>
+<div id="lobby" class="card glass"></div>
+<div id="room" style="display:none">
+<div class="card glass" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between"><div><b>Room <span id="code"></span></b> <span class="pill">🔒 Encrypted</span> <span class="pill">👥 <span id="cnt">1</span> online</span></div><div id="ctl" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+<div class="grid" id="tiles"></div>
+<div class="card glass" style="margin-top:16px"><h3>Live transcript (exact words spoken)</h3><p class="mut" id="tnote">Starts when you join. Allow the microphone when asked. Other people appear once the real-time backend is connected.</p><button class="btn g" id="ctr" style="margin-bottom:8px">📋 Copy transcript</button><div id="tr"></div></div>
+</div></section>
+
+<section id="v4" style="display:none"><h2>Help & Guide</h2><div class="card glass">
+<details open><summary><b>How is my email verified?</b></summary><p class="mut">After sign-up a 6-digit code is emailed to you. Only someone who can open that inbox can enter it, so it proves the address exists and is yours. College emails work the same way. Temporary-mail domains are blocked.</p></details>
+<details><summary><b>What does the Analyzer give me?</b></summary><p class="mut">A speaker-wise transcript (Name: what they said), summary, key points, important insights, tasks with deadlines, a 15-question quiz (Easy, Medium, Hard) and flip flashcards.</p></details>
+<details><summary><b>How do task alerts work?</b></summary><p class="mut">When a teacher says “submit the diagram by Friday”, it is listed under Tasks. Press Email alert (or Send all alerts) to get it in your inbox.</p></details>
+<details><summary><b>Host vs Participant?</b></summary><p class="mut">Hosts can start rooms, mute everyone, lock the room, record and end the meeting. Participants join with a code, raise a hand and leave.</p></details>
+<details><summary><b>What is the Ask AI button?</b></summary><p class="mut">After analysing a video, ask a question and it points to who said it and when.</p></details>
+<details><summary><b>Staying safe in meetings</b></summary><p class="mut">Share the code only with your class, lock the room once everyone has joined, and never share your password.</p></details>
+</div></section>
+<section id="v3" style="display:none"><h2>Account</h2><div class="card glass"><p id="who"></p><button class="btn g" id="sw">Switch role</button> <button class="btn g" id="th">Toggle theme</button> <button class="btn r" id="lo">Log out</button></div></section>
+</main><button class="btn" id="ask" style="display:none">✨ Ask AI</button><div id="ap" class="glass"><b>Ask about the video</b><div id="am" style="max-height:200px;overflow:auto;font-size:14px"></div><input id="aq" placeholder="e.g. How do I insert an image?"><button class="btn" id="as" style="width:100%">Send</button></div></div>
+<div id="toast" class="glass"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let mode='new',user=null,mem={};
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',3200)}
+
+/* 3D background */
+(function(){if(!window.THREE)return;const c=$('#gl'),r=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true}),s=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,100);cam.position.z=7;
+const ac=getComputedStyle(document.documentElement).getPropertyValue('--ac').trim()||'#7c7cff';
+const m=new THREE.Mesh(new THREE.IcosahedronGeometry(2.3,1),new THREE.MeshBasicMaterial({color:ac,wireframe:true,transparent:true,opacity:.2}));s.add(m);
+const m2=new THREE.Mesh(new THREE.TorusKnotGeometry(1,.25,90,12),new THREE.MeshBasicMaterial({color:0x7f93b5,wireframe:true,transparent:true,opacity:.16}));s.add(m2);
+const g=new THREE.BufferGeometry(),p=[];for(let i=0;i<500;i++)p.push((Math.random()-.5)*22,(Math.random()-.5)*14,(Math.random()-.5)*14);
+g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));const pts=new THREE.Points(g,new THREE.PointsMaterial({color:ac,size:.04,transparent:true,opacity:.45}));s.add(pts);
+let mx=0,my=0;addEventListener('pointermove',e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5;const b=$('#box');if(b&&innerWidth>760)b.style.transform=`perspective(800px) rotateY(${mx*8}deg) rotateX(${-my*8}deg)`});
+function rs(){r.setPixelRatio(Math.min(devicePixelRatio,2));r.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();m.position.x=innerWidth>760?2.8:0;m2.position.x=innerWidth>760?-3.5:0;m2.position.y=-1.8}
+addEventListener('resize',rs);rs();
+(function a(){m.rotation.x+=.003;m.rotation.y+=.004;m2.rotation.x-=.004;m2.rotation.y+=.005;pts.rotation.y+=.0006;cam.position.x+=(mx*2-cam.position.x)*.03;cam.position.y+=(-my*2-cam.position.y)*.03;cam.lookAt(0,0,0);r.render(s,cam);requestAnimationFrame(a)})()})();
+
+/* Auth */
+function tab(x){mode=x;$('#sg').style.display='none';$('#vf').style.display='none';$('#go').style.display='';$('#tN').classList.toggle('on',x=='new');$('#tR').classList.toggle('on',x=='ret');$('#nm').style.display=$('#rl').style.display=x=='new'?'':'none';$('#go').textContent=x=='new'?'Create account':'Log in';$('#er').textContent=''}
+$('#tN').onclick=()=>tab('new');$('#tR').onclick=()=>tab('ret');
+$('#go').onclick=()=>{const em=$('#em').value.trim().toLowerCase(),pw=$('#pw').value,nm=$('#nm').value.trim(),u=store.get('cm_users')||{},er=$('#er');
+const r=chk(em);if(!r.ok)return er.textContent=r.msg;
+if(pw.length<6)return er.textContent='Password must be at least 6 characters.';
+if(API)return apiAuth(em,pw,nm);
+if(mode=='new'){if(!nm)return er.textContent='Enter your name.';if(u[em])return er.textContent='Account exists. Use Existing user.';pend={em,nm,pw,role:$('#rl').value};vcode=String(100000+Math.floor(Math.random()*900000));$('#ve').textContent=em;$('#go').style.display='none';$('#vf').style.display='block';toast('Demo: your code is '+vcode+' (the real app emails it)');return}
+else{if(!u[em]||u[em].pw!==btoa(pw))return er.textContent='Wrong email or password.'}
+user={email:em,...u[em]};remember(em,pw);enter()};
+function enter(){$('#go').textContent='Loading your workspace…';$('#auth').classList.add('out');setTimeout(()=>{$('#auth').style.display='none';$('#app').style.display='block';$('#app').classList.add('inn');scrollTo(0,0);reveal()},560);$('#gl').style.opacity=.4;$('#hn').textContent=user.name.split(' ')[0];$('#hm').textContent=user.role=='host'?'Start a meeting':'Join a meeting';setTimeout(reveal,50);$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby()}
+$('#lo').onclick=async()=>{if(API){try{await api('/api/logout',{})}catch(e){}}location.reload()};
+$('#sw').onclick=()=>{user.role=user.role=='host'?'part':'host';if(API)api('/api/role',{role:user.role}).catch(()=>{});const u=store.get('cm_users')||{};if(u[user.email]){u[user.email].role=user.role;store.set('cm_users',u)}$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby();toast('Role switched')};
+$('#th').onclick=()=>{const d=document.documentElement;d.dataset.theme=d.dataset.theme=='dark'?'light':'dark'};
+
+/* Analyzer (demo data – replace with real AI backend) */
+let people=['SPK-01'];
+let quiz={Easy:[['What do ordered lists use to mark points?',['Symbols','Numbering','Colours'],1],['Which list type uses symbols such as filled circles to mark points?',['Ordered list','Unordered list','Table'],1],['Which tool is used in the session for Markdown cells?',['Jupyter Notebook','Excel','Photoshop'],0],['Besides plain text, what can be inserted in Markdown?',['Nothing','Only numbers','Links and images'],2],['Which type of notebook cell is used to write formatted text?',['Code cell','Markdown cell','Output cell'],1]],
+Medium:[['How are main points and sub-points told apart in an unordered list?',['By different symbols','By numbers only','They are not told apart'],0],['Where does the display text of a hyperlink go?',['Inside square brackets','Inside curly braces','After a hash'],0],['Where is the URL placed in a Markdown hyperlink?',['Before the square brackets','Inside parentheses after the brackets','At the end of the cell'],1],['Which character is added before hyperlink syntax to embed an image?',['An asterisk (*)','An ampersand (&)','An exclamation mark (!)'],2],['What is shown if the image URL is unavailable?',['The cell is deleted','The notebook crashes','The text inside the square brackets'],2]],
+Hard:[['Why is descriptive text inside the image brackets useful?',['It sets the image size','It is shown as alternative text if the image fails to load','It encrypts the link'],1],['How can audio and video be inserted in Markdown?',['Code cells only','A separate plugin','Using the same notation as images'],2],['In the demonstrated unordered list, what marks the main point?',['A filled circle','A filled square','An empty circle'],0],['According to the instructor, what decides how information is represented?',['The notebook version','It is up to you','The file size'],1],['Which set did the instructor recap as necessary to know?',['Only headings','Only code cells','Headings, normal text, ordered and unordered lists, hyperlinks and images'],2]]};
+let FT=[["", "SPK-01", "So, in an order list whatever so you can find the difference between this order list and an order list. So, in order list you will be giving some numbering to some points, some points and some some points. Whereas, come to another list you will be using the symbol here."], ["", "SPK-01", "So, this you same symbol for all the points when you run the court, it is going to give give some symbols, different symbols, where points and different symbols for points and different symbols for subsuffpoints. But differentiating from main point to subpoint. So now you just made those changes and try to execute this."], ["", "SPK-01", "So let me execute both of these things. So it is order list and this is an order list. Now you can see."], ["", "SPK-01", "So, I fill the circle is given to the main point, a fill the square is given to sub 1 and empty circle is given to sub 1. So, it is how you can differentiate order list of elements and order list of elements in this way. So, how you want to represent your information, it is up to you."], ["", "SPK-01", "So, based upon that, you can either go with ordered list of elements or you can go with another list of elements. And this is how you can represent your text. So, let me show you how you can do this."], ["", "SPK-01", "So, I want you to give a try and of these things. So, I can say a very less number of participants in the meeting. So, no worries."], ["", "SPK-01", "So, if you are clear with this order then on other list and I already do a one more thing like not only writing your writing, writing your normal text and your point where the presentation of your text even you can insert some links also like if you want to put any reference links in a mark don't say even you can insert reference links also let me show you that. So, use a fuse, wave packets, I am parrying the same. Okay."], ["", "SPK-01", "So, whatever the text you want to represent in the Markdowns and you just write down the text in wave packets. But, of course, I am writing click here. Now, when you are clicking on this text, page you want to open that page link you provide in the parent."], ["", "SPK-01", "If let us suppose I want to open Python official website which is Python.org. So, whenever I am clicking on the click here link or click here hyper link, I want to redirect it to this this homepage of python.org. Now I am providing this website here in parandas."], ["", "SPK-01", "Now I am disclosing this. Now you just try to understand. In swear brackets write down some text, in parandas is this bracketing known as parandas is technically in this parandas is you provide the URL which you want to link to this text."], ["", "SPK-01", "Now, when you link any URL to link or a link to text, this is known as a hyper link. Now, what you are doing here, you are linking one URL to a normal text. Then it becomes a hyper link."], ["", "SPK-01", "Now, you can see on the line and your text coloring glue, which indicates a representation of a hyper lake. So after writing this, you just click on run search, hit on run. Now you can see your text in this way."], ["", "SPK-01", "Now when you click on this, it will react to you to a new tap and this is the the URL which is linked to that text. So this is very, very important whenever you want to put any references any your Jupyter notebook you can use this Markdown cell hyperlink concept. So on this writing here in 13 hyperlink I hope it is clear so not only in 13 even you can insert images also."], ["", "SPK-01", "I'll tell you. So the syntax and everything is same. If you want to insert any image, so you just need to put an explanatory mask before this."], ["", "SPK-01", "And the remaining everything is same. So if you want to insert any image, which is the area in your image in, or which is there in your computer, then you just provide the part of the image. So, I, as I know I have no images, so I am just taking any image from the browser."], ["", "SPK-01", "So, this take any image from the browser. Okay, so let us take this image. So, give a right click on it."], ["", "SPK-01", "And now you just click on copy image address. Okay, don't go with any other ingredients. You just click on copy image address and then use that image address in this parent's list."], ["", "SPK-01", "All of this is very, very big or better go with some other image. So, it is very, very big or actual. Okay."], ["", "SPK-01", "So, now let me check with this image address. Okay. Now as this cockpit image address here, now if or any image is not available at this address, you can display a normal text."], ["", "SPK-01", "So that can be written inside this. If image exists with this link that image is going to be loaded, if not, this EIMG text is going to be displayed. Okay, let me run this and you can see an image is inserted and the Jupiter part."], ["", "SPK-01", "So, this is how you can insert an image also not only an image using the same syntax, you can insert an audio, you can insert a video, all the multimedia can be inserted using the same notation. So, these things are necessary for you to know when you are working with Mark themselves. So, these are the things one is heading and then writing a normal tip and then this point was representation which is nothing but order, leaves and unordered list and then inserting hyperlinks and inserting images."], ["", "SPK-01", "So, these things are necessary for you to know. You just give a trial on inserting a hyperlink and image. If you have any questions, do let me know."], ["", "SPK-01", "If we have no question we can wind up the session for now. This gives me confirmation if we are with these things whatever we discussed into this session. Done."], ["", "SPK-01", "Great. Yes. That is it for today."], ["", "SPK-01", "So we will meet again tomorrow. Thank you all."]];
+$('#dz').onclick=()=>$('#fl').click();
+$('#fl').onchange=e=>{const f=e.target.files[0];if(!f)return;if(API)return apiAnalyze(f);$('#pg').style.display='block';$('#res').style.display='none';const st=['Extracting audio…','Transcribing speech…','Identifying speakers…','Writing summary & quiz…'];let i=0,t0=Date.now();
+const iv=setInterval(()=>{i++;$('#pb').style.width=Math.min(i*20,100)+'%';$('#pt').textContent=st[Math.min(Math.floor(i/1.3),3)];if(i>=5){clearInterval(iv);$('#pg').style.display='none';show(f.name,((Date.now()-t0)/1000).toFixed(1))}},420)};
+function show(n,t){if(D){const b=$('#bn');b.style.display=D.demo?'':'none';b.innerHTML='⚠ <b>Demo mode.</b> The server has no speech-to-text key, so it is showing the built-in sample transcript instead of your video. See the README to turn on real transcription.'}$('#res').style.display='block';$('#tm').textContent=t;
+$('#sm').textContent=D?D.summary:`File: ${n}. Topic: formatting text in Jupyter Notebook Markdown cells. The instructor (SPK-01) explains the difference between ordered and unordered lists, then shows how to insert hyperlinks and images, and closes by asking learners to practise. Every spoken word is in the full transcript below.`;
+$('#sp').innerHTML=D?spk():'<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><div class="av" style="width:36px;height:36px;font-size:16px;margin:0">01</div><div><b>SPK-01</b><div class="mut">Speaker ID · the only voice in the recording</div></div></div>';
+$('#ft').innerHTML=FT.map(l=>`<p>${l[0]?'<span class="mut">['+esc(l[0])+']</span> ':''}<b style="color:var(--ac)">${esc(l[1])}:</b> ${esc(l[2])}</p>`).join('');
+$('#kp').innerHTML=(D?D.keyPoints:['Ordered lists use numbering; unordered lists use different symbols (filled circles, filled squares, empty circles) to separate main points from sub-points.','Hyperlinks: display text in square brackets, then the URL in parentheses.','Images use the hyperlink syntax preceded by an exclamation mark (!); the bracket text is shown if the image fails to load.','The same notation can also insert audio, video and other media.']).map(x=>`<li>${esc(x)}</li>`).join('');
+const tk=D?D.tasks.map(t=>[t.task,t.owner,t.due]):[['Try inserting a hyperlink and an image in a Markdown cell','Everyone','the next session'],['Attend the next session','Everyone','tomorrow']];
+$('#tk').innerHTML=tk.map((t,i)=>`<div style="margin:8px 0;padding:10px;border:1px solid var(--bd);border-radius:12px"><b>${esc(t[0])}</b><div class="mut">${esc(t[1])} · due ${esc(t[2])}</div><button class="btn g" style="padding:6px 12px;margin-top:6px" data-i="${i}">✉ Email alert</button></div>`).join('');
+$$('#tk button').forEach(b=>b.onclick=()=>{if(D)return sendAlert(b);b.textContent='✓ Alert sent';toast('Demo: alert would be sent to '+user.email)});
+$('#qt').innerHTML='';Object.keys(quiz).forEach((k,i)=>{const b=document.createElement('button');b.className='btn g'+(i?'':' on');b.textContent=k;b.onclick=()=>{$$('#qt button').forEach(x=>x.classList.toggle('on',x==b));q(k)};$('#qt').appendChild(b)});q('Easy');extras()}
+function q(k){qOk=qTot=0;$('#sc').textContent='';$('#qb').innerHTML='';quiz[k].forEach(([t,o,a])=>{const d=document.createElement('div');d.innerHTML=`<p><b>${esc(t)}</b></p>`;o.forEach((x,i)=>{const b=document.createElement('button');b.className='opt';b.textContent=x;b.onclick=()=>{[...d.querySelectorAll('.opt')].forEach((y,j)=>{y.disabled=true;if(j==a)y.classList.add('ok')});if(i!=a)b.classList.add('no');qTot++;if(i==a)qOk++;$('#sc').textContent=qOk+' / '+qTot+' correct'};d.appendChild(b)});$('#qb').appendChild(d)})}
+
+/* Meeting (UI prototype – needs WebRTC/SFU + STT backend) */
+let tmr=null,names=[];
+const lines=['Let us start with indexing.','Does an index slow down inserts?','Yes, every write must update it.','Can we see an example query?','I will share the EXPLAIN output.','Please submit the diagram by Friday.'];
+function lobby(){clearInterval(tmr);if(rec){const r=rec;rec=null;try{r.stop()}catch(e){}}$('#room').style.display='none';const L=$('#lobby');L.style.display='';
+L.innerHTML=user.role=='host'?`<h3>Host controls</h3><p class="mut">Create a secured room and share the code with attendees.</p><button class="btn" id="mk">+ Start new meeting</button>`
+:`<h3>Join a class</h3><p class="mut">Enter the code from your host.</p><input id="jc" placeholder="Meeting code" maxlength="6" style="text-transform:uppercase"><button class="btn" id="jn">Join meeting</button>`;
+if(user.role=='host')$('#mk').onclick=()=>API?enterRoom(null):start(Math.random().toString(36).slice(2,8).toUpperCase());
+else $('#jn').onclick=()=>{const c=$('#jc').value.trim();c.length>=4?(API?enterRoom(c.toUpperCase()):start(c.toUpperCase())):toast('Enter a valid code')}}
+function start(c){$('#lobby').style.display='none';$('#room').style.display='block';$('#code').textContent=c;names=[user.name];TL=[];render();
+$('#ctl').innerHTML=user.role=='host'?`<button class="btn g" id="c1">🎤 Mute all</button><button class="btn g" id="c2">🔒 Lock room</button><button class="btn g" id="c3">🔴 Record</button><button class="btn r" id="c4">End for all</button>`:`<button class="btn g" id="c1">🎤 Mic</button><button class="btn g" id="c2">✋ Raise hand</button><button class="btn r" id="c4">Leave</button>`;
+$('#c1').onclick=()=>toast(user.role=='host'?'All participants muted':'Mic toggled');$('#c2').onclick=()=>toast(user.role=='host'?'Room locked':'Hand raised');if($('#c3'))$('#c3').onclick=()=>toast('Recording started');$('#c4').onclick=lobby;
+$('#tr').innerHTML='';const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR){$('#tr').innerHTML='<p class="mut">Live transcription needs Google Chrome or Microsoft Edge.</p>';return}
+rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang='en-IN';
+rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const tx=e.results[i][0].transcript.trim();if(!tx)continue;const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});TL.push(`[${t}] ${user.name} (${uid()}): ${tx}`);const p=document.createElement('p');p.innerHTML=`<span class="mut">[${t}]</span> <b style="color:var(--ac)">${esc(user.name)} (${uid()}):</b> ${esc(tx)}`;$('#tr').appendChild(p);$('#tr').scrollTop=1e5}};
+rec.onend=()=>{if(rec)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error=='not-allowed'){toast('Allow microphone access to transcribe')}};
+try{rec.start()}catch(e){}}
+function render(){$('#cnt').textContent=names.length;$('#tiles').innerHTML=names.map(x=>`<div class="tile glass" data-n="${x}"><div class="av">${x[0]}</div>${x}</div>`).join('')}
+
+/* v3 */
+$('#pe').onclick=()=>{const p=$('#pw');p.type=p.type=='password'?'text':'password'};
+document.addEventListener('keydown',e=>{if(e.key!=='Enter'||!e.target.closest||!e.target.closest('#auth'))return;e.preventDefault();($('#vf').style.display==='block'?$('#vb'):$('#go')).click()});
+const uid=()=>user.id||'CM-'+(1000+Math.abs([...user.email].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7))%9000);
+function remember(em,pw){if(!$('#rm').checked)return;const l=store.get('cm_saved')||[],i=l.findIndex(x=>x.e===em),o={e:em,p:API?'':btoa(pw)};i<0?l.push(o):l[i]=o;store.set('cm_saved',l)}
+function sugg(){const sg=$('#sg'),v=$('#em').value.trim().toLowerCase(),l=(store.get('cm_saved')||[]).filter(x=>mode=='ret'&&(v.length==0||(v.length>=2&&x.e.includes(v))||x.e.startsWith(v))&&x.e!==v).slice(0,5);
+if(!l.length){sg.style.display='none';return}sg.style.display='block';sg.innerHTML='<div class="glass" style="padding:6px">'+l.map(x=>`<div style="display:flex;gap:4px"><button type="button" class="opt" data-e="${esc(x.e)}" style="margin:2px 0">🔑 ${esc(x.e)}</button><button type="button" class="nav" data-f="${esc(x.e)}" title="Forget this login" style="padding:4px 10px">✕</button></div>`).join('')+'</div>';
+sg.querySelectorAll('[data-e]').forEach(b=>b.onmousedown=e=>{e.preventDefault();const x=l.find(y=>y.e===b.dataset.e);$('#em').value=x.e;$('#pw').value=x.p?atob(x.p):'';sg.style.display='none';$('#eh').textContent=x.p?'✓ Saved login filled – press Enter':'✓ Email filled – enter your password';(x.p?$('#go'):$('#pw')).focus()});
+sg.querySelectorAll('[data-f]').forEach(b=>b.onmousedown=e=>{e.preventDefault();store.set('cm_saved',(store.get('cm_saved')||[]).filter(y=>y.e!==b.dataset.f));sugg()})}
+$('#em').addEventListener('input',sugg);$('#em').addEventListener('focus',sugg);$('#em').addEventListener('blur',()=>setTimeout(()=>$('#sg').style.display='none',150));
+let API=false,D=null,vid=null;
+async function api(path,body,method){const r=await fetch(path,{method:method||'POST',headers:{'Content-Type':'application/json','X-Requested-With':'cm'},credentials:'same-origin',body:body?JSON.stringify(body):undefined});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.error||'Request failed');return d}
+async function apiAuth(em,pw,nm){const er=$('#er');er.textContent='';const g=$('#go');g.disabled=true;try{if(mode=='new'){if(!nm)throw new Error('Enter your name.');const d=await api('/api/signup',{name:nm,email:em,password:pw,role:$('#rl').value});pend={em,pw};$('#ve').textContent=em;g.style.display='none';$('#vf').style.display='block';toast(d.devCode?'Dev mode (no email service set): your code is '+d.devCode:'Code sent. Check your inbox.')}else{const d=await api('/api/login',{email:em,password:pw,remember:$('#rm').checked});user=d.user;remember(em,pw);enter()}}catch(e){er.textContent=e.message}g.disabled=false}
+async function apiVerify(){try{const d=await api('/api/verify',{email:pend.em,code:$('#cd').value.trim(),remember:$('#rm').checked});user=d.user;remember(pend.em,pend.pw);enter()}catch(e){$('#er').textContent=e.message}}
+function mmss(ms){const s=Math.floor(ms/1000),f=n=>String(n).padStart(2,'0');return (s>=3600?f(Math.floor(s/3600))+':':'')+f(Math.floor(s%3600/60))+':'+f(s%60)}
+function loadResult(R){D=R;FT=R.transcript.map(l=>[R.demo?'':mmss(l.start),l.speaker,l.text]);quiz={};['Easy','Medium','Hard'].forEach(k=>quiz[k]=(R.quiz[k]||[]).map(x=>[x.q,x.options,x.answer]))}
+const spk=()=>D.speakers.map(x=>`<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><div class="av" style="width:36px;height:36px;font-size:14px;margin:0">${esc(x.id.slice(-2))}</div><div><b>${esc(x.id)}</b><div class="mut">${x.words} words · ${x.share}% of speech</div></div></div>`).join('');
+async function apiAnalyze(f){const pg=$('#pg'),pb=$('#pb'),pt=$('#pt');pg.style.display='block';$('#res').style.display='none';pb.style.width='6%';pt.textContent='Uploading '+f.name+'…';const t0=Date.now();
+try{const r=await fetch('/api/videos?name='+encodeURIComponent(f.name),{method:'PUT',headers:{'X-Requested-With':'cm','Content-Type':f.type||'application/octet-stream'},credentials:'same-origin',body:f});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.error||'Upload failed');
+let prog=12;for(;;){await new Promise(z=>setTimeout(z,1500));const s=await api('/api/videos/'+d.id,null,'GET');if(s.status=='error')throw new Error(s.error||'Processing failed');pt.textContent=s.stage||'Working…';prog=Math.min(prog+6,95);pb.style.width=prog+'%';if(s.status=='done'){vid=d.id;loadResult(s.result);pb.style.width='100%';pg.style.display='none';show(f.name,((Date.now()-t0)/1000).toFixed(1));break}}}
+catch(e){pg.style.display='none';toast(e.message)}$('#fl').value=''}
+async function sendAlert(b){try{b.disabled=true;await api('/api/videos/'+vid+'/alerts',{index:+b.dataset.i});b.textContent='✓ Alert emailed to '+user.email}catch(e){b.disabled=false;toast(e.message)}}
+async function askApi(q){const m=$('#am');m.innerHTML+=`<p><b>You:</b> ${esc(q)}</p>`;$('#aq').value='';try{const d=await api('/api/videos/'+vid+'/ask',{question:q});m.innerHTML+=`<p><b>AI:</b> ${esc(d.answer)}</p>`}catch(e){m.innerHTML+=`<p><b>AI:</b> ${esc(e.message)}</p>`}m.scrollTop=1e5}
+fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d&&'user' in d){API=true;if(d.user){user=d.user;enter()}}}).catch(()=>{});
+let rec=null,TL=[],es=null,isHost=false,locked=false,ppl=[],mic=true;
+async function enterRoom(code){try{if(!code){code=(await api('/api/rooms',{})).code}else{await api('/api/rooms/'+code+'/join',{})}openRoom(code)}catch(e){toast(e.message)}}
+function openRoom(code){$('#lobby').style.display='none';$('#room').style.display='block';$('#code').textContent=code;$('#tr').innerHTML='';TL=[];mic=true;
+$('#tnote').textContent='Everyone\'s speech appears here with their name and ID. Allow the microphone when asked (Chrome or Edge). Audio and video calling needs a media server, see the README.';
+es=new EventSource('/api/rooms/'+code+'/events');
+es.addEventListener('init',e=>{const d=JSON.parse(e.data);isHost=d.host;locked=d.locked;ppl=d.people;d.lines.forEach(addLine);ctl(code);rt()});
+es.addEventListener('people',e=>{ppl=JSON.parse(e.data);rt()});
+es.addEventListener('line',e=>addLine(JSON.parse(e.data)));
+es.addEventListener('lock',e=>{locked=JSON.parse(e.data).locked;ctl(code);toast(locked?'Room locked: nobody new can join':'Room unlocked')});
+es.addEventListener('ended',()=>{closeRoom();toast('The host ended the meeting')});
+es.addEventListener('removed',()=>{closeRoom();toast('You were removed by the host')});
+es.onerror=()=>{if(es&&es.readyState==2){closeRoom();toast('Could not stay connected to the meeting')}};
+startMic(code)}
+function addLine(l){const t=new Date(l.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});TL.push(`[${t}] ${l.name} (${l.id}): ${l.text}`);const p=document.createElement('p');p.innerHTML=`<span class="mut">[${t}]</span> <b style="color:var(--ac)">${esc(l.name)} (${esc(l.id)}):</b> ${esc(l.text)}`;$('#tr').appendChild(p);$('#tr').scrollTop=1e5;const tile=[...$$('.tile')].find(x=>x.dataset.n==l.id);if(tile){tile.classList.add('sp');setTimeout(()=>tile.classList.remove('sp'),2000)}}
+function rt(){$('#cnt').textContent=ppl.length;$('#tiles').innerHTML=ppl.map(x=>`<div class="tile glass" data-n="${esc(x.id)}" style="position:relative"><div class="av">${esc(x.name[0]||'?')}</div>${esc(x.name)}${x.hand?' ✋':''}<div class="mut" style="font-size:11px">${esc(x.id)}</div>${isHost&&x.id!==user.id?`<button class="nav" data-rm="${esc(x.id)}" title="Remove from meeting" style="position:absolute;top:6px;right:6px;padding:4px 8px">✕</button>`:''}</div>`).join('');
+$$('[data-rm]').forEach(b=>b.onclick=()=>api('/api/rooms/'+$('#code').textContent+'/remove',{id:b.dataset.rm}).catch(e=>toast(e.message)))}
+function ctl(code){$('#ctl').innerHTML=(isHost?`<button class="btn g" id="k1">${locked?'🔓 Unlock room':'🔒 Lock room'}</button>`:`<button class="btn g" id="k4">✋ Raise hand</button>`)+`<button class="btn g" id="k5">🎤 Mic: ${mic?'on':'off'}</button><button class="btn g" id="k2">📋 Copy transcript</button><button class="btn r" id="k3">${isHost?'End for all':'Leave'}</button>`;
+$('#k2').onclick=()=>cp(TL.join('\n'),'Transcript copied');
+$('#k5').onclick=e=>{mic=!mic;e.target.textContent='🎤 Mic: '+(mic?'on':'off');if(rec){try{mic?rec.start():rec.stop()}catch(x){}}};
+if(isHost){$('#k1').onclick=()=>api('/api/rooms/'+code+'/lock',{locked:!locked}).catch(e=>toast(e.message));$('#k3').onclick=()=>api('/api/rooms/'+code+'/end',{}).catch(e=>toast(e.message))}
+else{let up=false;$('#k4').onclick=e=>{up=!up;api('/api/rooms/'+code+'/hand',{up}).catch(()=>{});e.target.textContent=up?'✋ Lower hand':'✋ Raise hand'};$('#k3').onclick=closeRoom}}
+function startMic(code){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('Live speech needs Chrome or Edge. You can still read the transcript.');return}
+rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang='en-IN';
+rec.onresult=e=>{if(!mic)return;for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const tx=e.results[i][0].transcript.trim();if(tx)sendLine(code,tx)}};
+rec.onend=()=>{if(rec&&mic)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error=='not-allowed')toast('Allow microphone access to be transcribed')};try{rec.start()}catch(e){}}
+function sendLine(code,text){return api('/api/rooms/'+code+'/line',{text}).catch(()=>{})}
+function closeRoom(){if(es){es.close();es=null}lobby()}const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let qOk=0,qTot=0,pend=null,vcode='';
+const DISP=['mailinator.com','tempmail.com','10minutemail.com','guerrillamail.com','yopmail.com','trashmail.com'];
+function chk(em){const m=/^[^\s@]+@([^\s@]+\.[a-z]{2,})$/i.exec(em);if(!m)return{ok:0,msg:'Enter a valid email.'};const d=m[1].toLowerCase();if(DISP.includes(d))return{ok:0,msg:'Temporary email domains are not allowed.'};return{ok:1,col:/\.(edu|ac)(\.[a-z]{2})?$/.test(d)}}
+$('#em').oninput=()=>{const v=$('#em').value.trim(),r=chk(v);$('#eh').textContent=!v?'':!r.ok?'⚠ '+r.msg:r.col?'🎓 College email detected':'✓ Format OK – a code will confirm it exists'};
+$('#vb').onclick=()=>{if(API)return apiVerify();if($('#cd').value.trim()!==vcode)return $('#er').textContent='Incorrect code. Check your inbox and try again.';const u=store.get('cm_users')||{};u[pend.em]={name:pend.nm,pw:btoa(pend.pw),role:pend.role,verified:true,id:'CM-'+(1000+Math.floor(Math.random()*9000))};store.set('cm_users',u);user={email:pend.em,...u[pend.em]};remember(pend.em,pend.pw);enter()};
+function go(v){$$('.nav').forEach(x=>x.classList.toggle('on',x.dataset.v==v));['v0','v1','v2','v3','v4'].forEach(k=>$('#'+k).style.display=k==v?'':'none');$('#ask').style.display=v=='v1'&&$('#res').style.display=='block'?'block':'none';$('#ap').style.display='none';reveal();scrollTo({top:0,behavior:'smooth'})}
+$$('.nav').forEach(b=>b.onclick=()=>go(b.dataset.v));$$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+const io='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);const t=e.target;setTimeout(()=>t.style.transitionDelay='0ms',900)}}),{threshold:.06}):null;
+function reveal(){$$('.card:not(.in)').forEach((c,i)=>{c.classList.add('rv');c.style.transitionDelay=Math.min(i%6,5)*80+'ms';io?io.observe(c):c.classList.add('in')})}
+document.addEventListener('click',e=>{const b=e.target.closest('.btn');if(!b)return;const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height),s=document.createElement('span');s.className='rip';s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;b.appendChild(s);setTimeout(()=>s.remove(),600)});
+function cp(t,m){try{navigator.clipboard.writeText(t).then(()=>toast(m),()=>toast('Copy blocked by browser'))}catch(e){toast('Copy blocked by browser')}}
+function extras(){
+$('#ins').innerHTML=(D?D.insights:['Markdown cells in Jupyter Notebooks let you present information clearly with formatted lists, hyperlinks and embedded media.','Descriptive text inside the brackets of an image ensures alternative text is shown if the image URL is broken or unavailable.']).map(x=>`<li>${esc(x)}</li>`).join('');
+const fc=D?D.flashcards.map(f=>[f.q,f.a]):[['How do ordered and unordered lists differ in Markdown?','Ordered lists use numbering; unordered lists use symbols to separate main points and sub-points.'],['What is the Markdown syntax for a hyperlink?','Display text in square brackets followed by the URL in parentheses.'],['Which character starts the syntax to embed an image?','An exclamation mark (!).'],['What happens if the image URL is unavailable?','The text inside the square brackets is displayed.']];
+$('#fcs').innerHTML=fc.map(c=>`<div class="fl"><div class="fc"><div>${esc(c[0])}</div><div>${esc(c[1])}</div></div></div>`).join('');
+$$('.fc').forEach(c=>c.onclick=()=>c.classList.toggle('on'));
+$('#cs').onclick=()=>cp($('#sm').textContent+'\n\n'+FT.map(l=>l[1]+': '+l[2]).join('\n'),'Summary and full transcript copied');
+$('#ca').onclick=()=>{if(D){api('/api/videos/'+vid+'/alerts',{}).then(r=>{$$('#tk button').forEach(b=>b.textContent='✓ Alert emailed');toast(r.sent+' task alert(s) emailed to '+user.email)}).catch(e=>toast(e.message));return}$$('#tk button').forEach(b=>b.click());toast('Demo: 3 task alerts queued for '+user.email)};
+$('#tt').onclick=()=>{const f=$('#ft');f.style.display=f.style.display=='none'?'':'none'};
+$('#ask').style.display='block';reveal()}
+$('#ask').onclick=()=>{const p=$('#ap');p.style.display=p.style.display=='block'?'none':'block'};
+function ans(){const q=$('#aq').value.trim();if(!q)return;if(D)return askApi(q);const w=q.toLowerCase().match(/[a-z0-9]{3,}/g)||[];let best=null,bs=0;FT.forEach(l=>{const n=w.filter(x=>l[2].toLowerCase().includes(x)).length;if(n>bs){bs=n;best=l}});const m=$('#am');m.innerHTML+=`<p><b>You:</b> ${q.replace(/</g,'&lt;')}</p><p><b>AI:</b> ${best?`${best[1]} said: ${best[2]}`:'I could not find that in this video.'}</p>`;m.scrollTop=1e5;$('#aq').value=''}
+$('#ctr').onclick=()=>cp(TL.join('\n'),'Transcript copied');$('#as').onclick=ans;$('#aq').onkeydown=e=>{if(e.key=='Enter')ans()};
+</script></body></html>
