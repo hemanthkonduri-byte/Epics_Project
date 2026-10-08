@@ -39,10 +39,23 @@ function extractAudio(src, dst) {
 }
 
 /* ---------- Speech to text (utterances: {speaker,start,text}, start in ms) ---------- */
+const ts = (ms) => {
+  const s = Math.floor(Math.max(0, ms || 0) / 1000), f = (n) => String(n).padStart(2, '0');
+  return `${f(Math.floor(s / 3600))}:${f(Math.floor((s % 3600) / 60))}:${f(s % 60)}`;
+};
+
 async function transcribe(audioPath) {
   if (demo()) {
-    const paras = JSON.parse(await fsp.readFile(path.join(__dirname, 'mock', 'transcript.json'), 'utf8'));
-    return paras.map((text, i) => ({ speaker: 'A', start: i * 30000, text }));
+    const raw = JSON.parse(await fsp.readFile(path.join(__dirname, 'mock', 'transcript.json'), 'utf8'));
+    if (Array.isArray(raw) && raw.length && typeof raw[0] === 'object') {
+      return raw.map((u, i) => ({
+        speaker: u.speaker || 'SPK-01',
+        name: u.name || ('Speaker ' + (u.speaker || '01')),
+        start: Number.isFinite(u.start) ? u.start : i * 15000,
+        text: u.text
+      }));
+    }
+    return raw.map((text, i) => ({ speaker: 'SPK-01', name: 'Instructor', start: i * 30000, text }));
   }
   const key = E().ASSEMBLYAI_API_KEY;
   if (!key) throw new Error('No speech-to-text key set. Add ASSEMBLYAI_API_KEY to .env (or start with "npm run demo").');
@@ -75,15 +88,27 @@ async function transcribe(audioPath) {
 
 function shapeTranscript(utt) {
   const ids = new Map();
+  const names = new Map();
   const words = new Map();
   const transcript = utt.map((u) => {
-    if (!ids.has(u.speaker)) ids.set(u.speaker, 'SPK-' + String(ids.size + 1).padStart(2, '0'));
-    const id = ids.get(u.speaker);
+    let id = u.speaker;
+    if (!id || (!id.startsWith('SPK-') && !id.startsWith('CM-'))) {
+      if (!ids.has(u.speaker)) ids.set(u.speaker, 'SPK-' + String(ids.size + 1).padStart(2, '0'));
+      id = ids.get(u.speaker);
+    }
+    const name = u.name || ('Speaker ' + id.replace(/^[^\d]*/, ''));
+    names.set(id, name);
     words.set(id, (words.get(id) || 0) + (u.text.match(/\S+/g) || []).length);
-    return { speaker: id, start: u.start, text: u.text };
+    const start = Number.isFinite(u.start) ? u.start : 0;
+    return { speaker: id, name, start, timeStr: ts(start), text: u.text };
   });
   const total = [...words.values()].reduce((a, b) => a + b, 0) || 1;
-  const speakers = [...words].map(([id, w]) => ({ id, words: w, share: Math.round((w * 100) / total) }));
+  const speakers = [...words].map(([id, w]) => ({
+    id,
+    name: names.get(id) || id,
+    words: w,
+    share: Math.round((w * 100) / total)
+  }));
   return { transcript, speakers };
 }
 
@@ -101,8 +126,7 @@ async function claude(system, user, maxTokens) {
   return (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
 }
 
-const ts = (ms) => { const s = Math.floor(ms / 1000), f = (n) => String(n).padStart(2, '0'); return `${f(Math.floor(s / 3600))}:${f(Math.floor((s % 3600) / 60))}:${f(s % 60)}`; };
-const asText = (transcript) => transcript.map((l) => `[${ts(l.start)}] ${l.speaker}: ${l.text}`).join('\n');
+const asText = (transcript) => transcript.map((l) => `[${l.timeStr || ts(l.start)}] ${l.name ? l.name + ' (' + l.speaker + ')' : l.speaker}: ${l.text}`).join('\n');
 
 function parseJson(text) {
   const a = text.indexOf('{'), b = text.lastIndexOf('}');

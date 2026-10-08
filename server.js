@@ -184,6 +184,11 @@ async function api(req, res, url) {
   if (m !== 'GET' && req.headers['x-requested-with'] !== 'cm') throw httpErr(403, 'Blocked request.');
 
   if (m === 'GET' && p === '/api/me') { const u = currentUser(req); return send(res, 200, { user: u ? pub(u) : null }); }
+  if (m === 'GET' && p === '/api/demo/sample') {
+    const mockT = JSON.parse(fs.readFileSync(path.join(__dirname, 'mock', 'transcript.json'), 'utf8'));
+    const mockA = JSON.parse(fs.readFileSync(path.join(__dirname, 'mock', 'analysis.json'), 'utf8'));
+    return send(res, 200, { transcript: mockT, analysis: mockA });
+  }
 
   if (m === 'POST' && p === '/api/signup') {
     if (limited('su:' + ip, 10, 15 * 60000)) throw httpErr(429, 'Too many attempts. Try again later.');
@@ -295,7 +300,55 @@ async function api(req, res, url) {
     if (m === 'GET' && act === 'transcript') {
       const mine = isHost || db.prepare('SELECT 1 FROM mlines WHERE code=? AND uid=?').get(code, u.uid);
       if (!mine) throw httpErr(403, 'Not allowed.');
-      return send(res, 200, { code, lines: db.prepare('SELECT uid AS id, name, text, ts FROM mlines WHERE code=? ORDER BY id').all(code) });
+      const rawLines = db.prepare('SELECT uid AS id, name, text, ts FROM mlines WHERE code=? ORDER BY id').all(code);
+      const formatted = rawLines.map(l => {
+        const d = new Date(l.ts);
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        return { id: l.id, name: l.name, text: l.text, ts: l.ts, timeStr };
+      });
+      const fmt = url.searchParams.get('format');
+      if (fmt === 'csv') {
+        const csvRows = ['"Time","ID","Name","Transcript"'];
+        for (const r of formatted) {
+          csvRows.push(`"${r.timeStr}","${r.id}","${(r.name || '').replace(/"/g, '""')}","${(r.text || '').replace(/"/g, '""')}"`);
+        }
+        res.writeHead(200, {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="transcript-${code}.csv"`,
+          'Cache-Control': 'no-store'
+        });
+        return res.end(csvRows.join('\r\n'));
+      }
+      if (fmt === 'txt') {
+        const txtRows = formatted.map(r => `[${r.timeStr}] [${r.id}] ${r.name}: ${r.text}`);
+        res.writeHead(200, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Disposition': `attachment; filename="transcript-${code}.txt"`,
+          'Cache-Control': 'no-store'
+        });
+        return res.end(txtRows.join('\r\n'));
+      }
+      return send(res, 200, { code, lines: formatted });
+    }
+    if (m === 'POST' && act === 'simulate') {
+      if (mt.ended) throw httpErr(410, 'This meeting has ended.');
+      const sampleDialogues = [
+        { id: 'CM-102941', name: 'Rahul Verma', text: 'Good morning everyone! Can everyone see the screen clearly?' },
+        { id: 'CM-108253', name: 'Ananya Patel', text: 'Yes, audio and video are crystal clear. Thanks Rahul!' },
+        { id: 'CM-105190', name: 'David Chen', text: 'Could we clarify the expected submission format for the assignment?' },
+        { id: u.uid, name: u.name, text: 'Please submit a single Markdown file (.md) or exported Jupyter notebook (.ipynb).' },
+        { id: 'CM-102941', name: 'Rahul Verma', text: 'Understood. Should we include sample images and link references as well?' },
+        { id: u.uid, name: u.name, text: 'Yes, make sure your image links contain proper alt text descriptions.' },
+        { id: 'CM-108253', name: 'Ananya Patel', text: 'Thank you! We will finalize our documents and submit on time.' }
+      ];
+      let delay = 0;
+      for (const item of sampleDialogues) {
+        const line = { id: item.id, name: item.name, text: item.text, ts: Date.now() + delay };
+        db.prepare('INSERT INTO mlines(code,uid,name,text,ts) VALUES(?,?,?,?,?)').run(code, item.id, item.name, item.text, line.ts);
+        emit(code, 'line', line);
+        delay += 600;
+      }
+      return send(res, 200, { ok: true, count: sampleDialogues.length });
     }
     if (m === 'POST' && act === 'line') {
       if (mt.ended) throw httpErr(410, 'This meeting has ended.');
@@ -367,7 +420,7 @@ async function api(req, res, url) {
   throw httpErr(404, 'Not found.');
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json' };
 function serveStatic(req, res, url) {
   if (req.method !== 'GET' && req.method !== 'HEAD') throw httpErr(405, 'Method not allowed.');
   let rel;
@@ -384,6 +437,13 @@ function serveStatic(req, res, url) {
 
 const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 const server = http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    return res.end();
+  }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('Content-Security-Policy', CSP);

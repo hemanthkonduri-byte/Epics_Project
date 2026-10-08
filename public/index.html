@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2f4468">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>ClassMind – Meetings & Video Summaries</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f5f3ee;--card:rgba(255,255,255,.86);--tx:#1f2937;--mut:#6b7280;--ac:#2f4468;--ac2:#5f7fa8;--bd:rgba(47,68,104,.16);--ok:#12a36b;--bad:#c2410c;--p:#2f4468}
@@ -49,7 +53,30 @@ main{margin-left:230px;padding:24px;max-width:1100px}
 .tile{aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;flex-direction:column;border-radius:16px;font-weight:700;position:relative;overflow:hidden}
 .av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:20px;margin-bottom:6px}
 .tile.sp{box-shadow:0 0 0 3px var(--ac2),0 0 28px var(--ac2)}
-#tr{height:240px;overflow:auto;font-size:14px}#tr p{margin:6px 0}
+#tr{height:340px;overflow:auto;font-size:14px;padding:8px 4px}
+.bn{display:none}
+#toast{position:fixed;right:16px;top:calc(14px + env(safe-area-inset-top,0px));z-index:9;padding:12px 16px;display:none;max-width:320px}
+/* Structured Transcript System: (Time, ID, Transcript) */
+.tr-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.tr-search{flex:1;min-width:180px;padding:9px 14px;border-radius:10px;border:1px solid var(--bd);background:var(--card);font-size:13px;margin:0}
+.tr-select{width:auto;min-width:160px;padding:9px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--card);font-size:13px;margin:0}
+.tr-btn-group{display:inline-flex;gap:3px;background:var(--bd);padding:3px;border-radius:10px}
+.tr-toggle{padding:6px 12px;font-size:12px;border-radius:8px;border:0;background:transparent;cursor:pointer;color:var(--mut);font-weight:600;transition:background .2s,color .2s}
+.tr-toggle.on{background:var(--card);color:var(--tx);box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.tr-card{padding:12px 15px;border:1px solid var(--bd);border-radius:14px;margin-bottom:10px;background:var(--card);transition:transform .15s,box-shadow .15s}
+.tr-card:hover{transform:translateY(-1px);box-shadow:0 6px 18px -6px var(--ac)}
+.tr-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.tr-speaker-tag{display:inline-flex;align-items:center;gap:8px;font-weight:700}
+.tr-av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.15)}
+.tr-id-pill{font-size:11px;padding:2px 7px;border-radius:6px;font-family:monospace;font-weight:600}
+.tr-time-pill{font-size:11px;padding:3px 8px;border-radius:8px;font-weight:700;background:var(--bd);color:var(--tx);font-family:monospace;letter-spacing:0.02em}
+.tr-text{font-size:14px;line-height:1.55;margin:4px 0 0;color:var(--tx)}
+.tr-table-wrap{max-height:480px;overflow:auto;border-radius:12px;border:1px solid var(--bd)}
+.tr-table{width:100%;border-collapse:collapse;font-size:13px;text-align:left}
+.tr-table th{position:sticky;top:0;background:var(--card);backdrop-filter:blur(10px);padding:10px 12px;border-bottom:1px solid var(--bd);font-weight:700;z-index:2}
+.tr-table td{padding:10px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+.tr-table tr:hover{background:rgba(47,68,104,0.04)}
+.tr-hl{background:rgba(255,230,0,0.38);border-radius:2px;padding:0 2px;color:#000;font-weight:600}
 .bn{display:none}
 #toast{position:fixed;right:16px;top:calc(14px + env(safe-area-inset-top,0px));z-index:9;padding:12px 16px;display:none;max-width:320px}
 @media(max-width:760px){
@@ -114,7 +141,32 @@ details{padding:12px 0;border-bottom:1px solid var(--bd)}summary{cursor:pointer}
 <div class="card glass"><h3>Speakers</h3><div id="sp"></div></div></div>
 <div class="grid"><div class="card glass"><h3><span class="ic">💡</span>Key points</h3><ul id="kp"></ul></div>
 <div class="card glass"><h3><span class="ic">✅</span>Tasks & deadlines</h3><div id="tk"></div></div><div class="card glass"><h3><span class="ic">📈</span>Important insights</h3><ul id="ins"></ul></div></div>
-<div class="card glass"><h3><span class="ic">💬</span>Full speaker-wise transcript</h3><button class="btn g" id="tt" style="margin-bottom:8px">Show / hide</button><div id="ft" style="max-height:560px;overflow:auto"></div></div>
+<div class="card glass">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+  <div>
+    <h3 style="display:flex;align-items:center;gap:8px"><span class="ic">💬</span>Speaker-wise Transcript</h3>
+    <p class="mut" style="margin:2px 0 0;font-size:13px">Structured format: <b>(Time , ID , Transcript)</b> with individual speaker differentiation</p>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <div class="tr-btn-group">
+      <button type="button" class="tr-toggle on" id="ft-view-cards">Timeline Cards</button>
+      <button type="button" class="tr-toggle" id="ft-view-table">Structured Table</button>
+    </div>
+    <button type="button" class="btn g" id="ft-copy" style="padding:6px 12px;font-size:12px">📋 Copy</button>
+    <button type="button" class="btn g" id="ft-csv" style="padding:6px 12px;font-size:12px">⬇ CSV</button>
+    <button type="button" class="btn g" id="ft-txt" style="padding:6px 12px;font-size:12px">⬇ TXT</button>
+    <button type="button" class="btn g" id="tt" style="padding:6px 12px;font-size:12px">Collapse</button>
+  </div>
+</div>
+<div class="tr-bar" id="ft-tools">
+  <input class="tr-search" id="ft-search" placeholder="🔍 Search keywords in transcript…">
+  <select class="tr-select" id="ft-filter"><option value="all">All Speakers (Everyone)</option></select>
+  <span class="pill" id="ft-count">0 lines</span>
+</div>
+<div id="ft-wrap" style="max-height:560px;overflow:auto">
+  <div id="ft"></div>
+</div>
+</div>
 <div class="card glass"><h3><span class="ic">📝</span>Quiz (15 questions) <span class="pill" id="sc"></span></h3><div class="tabs" id="qt"></div><div id="qb"></div></div><div class="card glass"><h3><span class="ic">🃏</span>Flashcards</h3><p class="mut">Tap a card to flip it.</p><div class="grid" id="fcs"></div></div>
 </div></section>
 
@@ -124,7 +176,33 @@ details{padding:12px 0;border-bottom:1px solid var(--bd)}summary{cursor:pointer}
 <div id="room" style="display:none">
 <div class="card glass" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between"><div><b>Room <span id="code"></span></b> <span class="pill">🔒 Encrypted</span> <span class="pill">👥 <span id="cnt">1</span> online</span></div><div id="ctl" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
 <div class="grid" id="tiles"></div>
-<div class="card glass" style="margin-top:16px"><h3>Live transcript (exact words spoken)</h3><p class="mut" id="tnote">Starts when you join. Allow the microphone when asked. Other people appear once the real-time backend is connected.</p><button class="btn g" id="ctr" style="margin-bottom:8px">📋 Copy transcript</button><div id="tr"></div></div>
+<div class="card glass" style="margin-top:16px">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+  <div>
+    <h3 style="display:flex;align-items:center;gap:8px"><span class="ic">🎙</span>Live Meeting Transcript</h3>
+    <p class="mut" style="margin:2px 0 0;font-size:13px" id="tnote">Real-time format: <b>(Time , ID , Transcript)</b> · multi-person differentiated speech</p>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <div class="tr-btn-group">
+      <button type="button" class="tr-toggle on" id="mt-view-cards">Stream View</button>
+      <button type="button" class="tr-toggle" id="mt-view-table">Structured Table</button>
+    </div>
+    <button type="button" class="btn" id="mt-sim" style="padding:7px 14px;font-size:12px;background:linear-gradient(135deg,#10b981,#047857);box-shadow:none">✨ Simulate Discussion</button>
+    <button type="button" class="btn g" id="ctr" style="padding:6px 12px;font-size:12px">📋 Copy</button>
+    <button type="button" class="btn g" id="mt-csv" style="padding:6px 12px;font-size:12px">⬇ CSV</button>
+    <button type="button" class="btn g" id="mt-txt" style="padding:6px 12px;font-size:12px">⬇ TXT</button>
+  </div>
+</div>
+<div class="tr-bar">
+  <input class="tr-search" id="mt-search" placeholder="🔍 Search meeting spoken words…">
+  <select class="tr-select" id="mt-filter"><option value="all">All Participants</option></select>
+  <label class="mut" style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="mt-autoscroll" checked style="width:auto;margin:0"> Auto-scroll</label>
+  <span class="pill" id="mt-count">0 lines</span>
+</div>
+<div id="mt-wrap" style="max-height:420px;overflow:auto">
+  <div id="tr"></div>
+</div>
+</div>
 </div></section>
 
 <section id="v4" style="display:none"><h2>Help & Guide</h2><div class="card glass">
@@ -170,120 +248,839 @@ else{if(!u[em]||u[em].pw!==btoa(pw))return er.textContent='Wrong email or passwo
 user={email:em,...u[em]};remember(em,pw);enter()};
 function enter(){$('#go').textContent='Loading your workspace…';$('#auth').classList.add('out');setTimeout(()=>{$('#auth').style.display='none';$('#app').style.display='block';$('#app').classList.add('inn');scrollTo(0,0);reveal()},560);$('#gl').style.opacity=.4;$('#hn').textContent=user.name.split(' ')[0];$('#hm').textContent=user.role=='host'?'Start a meeting':'Join a meeting';setTimeout(reveal,50);$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby()}
 $('#lo').onclick=async()=>{if(API){try{await api('/api/logout',{})}catch(e){}}location.reload()};
-$('#sw').onclick=()=>{user.role=user.role=='host'?'part':'host';if(API)api('/api/role',{role:user.role}).catch(()=>{});const u=store.get('cm_users')||{};if(u[user.email]){u[user.email].role=user.role;store.set('cm_users',u)}$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby();toast('Role switched')};
-$('#th').onclick=()=>{const d=document.documentElement;d.dataset.theme=d.dataset.theme=='dark'?'light':'dark'};
+$('#sw').onclick=()=>{user.role=user.role=='host'?'part':'host';if(API)api('/api/role',{role:user.role}).catch(()=>{});const u=store.get('cm_users')||{};if(u[user.email]){u[user.email].role=user.role;store.set('cm_users',u)}$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby();t/* Palette generator for clear speaker differentiation */
+const PALETTES = [
+  { bg: 'linear-gradient(135deg, #2563eb, #1d4ed8)', border: '#60a5fa', badge: 'rgba(37,99,235,0.15)', badgeTx: '#2563eb' },
+  { bg: 'linear-gradient(135deg, #059669, #047857)', border: '#34d399', badge: 'rgba(5,150,105,0.15)', badgeTx: '#059669' },
+  { bg: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: '#a78bfa', badge: 'rgba(124,58,237,0.15)', badgeTx: '#7c3aed' },
+  { bg: 'linear-gradient(135deg, #d97706, #b45309)', border: '#fbbf24', badge: 'rgba(217,119,6,0.15)', badgeTx: '#d97706' },
+  { bg: 'linear-gradient(135deg, #db2777, #be185d)', border: '#f472b6', badge: 'rgba(219,39,119,0.15)', badgeTx: '#db2777' },
+  { bg: 'linear-gradient(135deg, #0891b2, #0e7490)', border: '#22d3ee', badge: 'rgba(8,145,178,0.15)', badgeTx: '#0891b2' },
+];
+function speakerStyle(idOrName) {
+  let h = 0, s = String(idOrName || 'User');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return PALETTES[h % PALETTES.length];
+}
+function initials(name) {
+  const parts = String(name || 'U').trim().split(/\s+/);
+  return ((parts[0] ? parts[0][0] : '') + (parts[1] ? parts[1][0] : '')).toUpperCase() || 'U';
+}
+function highlight(text, q) {
+  if (!q) return esc(text);
+  const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return esc(text).replace(regex, '<span class="tr-hl">$1</span>');
+}
 
-/* Analyzer (demo data – replace with real AI backend) */
-let people=['SPK-01'];
-let quiz={Easy:[['What do ordered lists use to mark points?',['Symbols','Numbering','Colours'],1],['Which list type uses symbols such as filled circles to mark points?',['Ordered list','Unordered list','Table'],1],['Which tool is used in the session for Markdown cells?',['Jupyter Notebook','Excel','Photoshop'],0],['Besides plain text, what can be inserted in Markdown?',['Nothing','Only numbers','Links and images'],2],['Which type of notebook cell is used to write formatted text?',['Code cell','Markdown cell','Output cell'],1]],
-Medium:[['How are main points and sub-points told apart in an unordered list?',['By different symbols','By numbers only','They are not told apart'],0],['Where does the display text of a hyperlink go?',['Inside square brackets','Inside curly braces','After a hash'],0],['Where is the URL placed in a Markdown hyperlink?',['Before the square brackets','Inside parentheses after the brackets','At the end of the cell'],1],['Which character is added before hyperlink syntax to embed an image?',['An asterisk (*)','An ampersand (&)','An exclamation mark (!)'],2],['What is shown if the image URL is unavailable?',['The cell is deleted','The notebook crashes','The text inside the square brackets'],2]],
-Hard:[['Why is descriptive text inside the image brackets useful?',['It sets the image size','It is shown as alternative text if the image fails to load','It encrypts the link'],1],['How can audio and video be inserted in Markdown?',['Code cells only','A separate plugin','Using the same notation as images'],2],['In the demonstrated unordered list, what marks the main point?',['A filled circle','A filled square','An empty circle'],0],['According to the instructor, what decides how information is represented?',['The notebook version','It is up to you','The file size'],1],['Which set did the instructor recap as necessary to know?',['Only headings','Only code cells','Headings, normal text, ordered and unordered lists, hyperlinks and images'],2]]};
-let FT=[["", "SPK-01", "So, in an order list whatever so you can find the difference between this order list and an order list. So, in order list you will be giving some numbering to some points, some points and some some points. Whereas, come to another list you will be using the symbol here."], ["", "SPK-01", "So, this you same symbol for all the points when you run the court, it is going to give give some symbols, different symbols, where points and different symbols for points and different symbols for subsuffpoints. But differentiating from main point to subpoint. So now you just made those changes and try to execute this."], ["", "SPK-01", "So let me execute both of these things. So it is order list and this is an order list. Now you can see."], ["", "SPK-01", "So, I fill the circle is given to the main point, a fill the square is given to sub 1 and empty circle is given to sub 1. So, it is how you can differentiate order list of elements and order list of elements in this way. So, how you want to represent your information, it is up to you."], ["", "SPK-01", "So, based upon that, you can either go with ordered list of elements or you can go with another list of elements. And this is how you can represent your text. So, let me show you how you can do this."], ["", "SPK-01", "So, I want you to give a try and of these things. So, I can say a very less number of participants in the meeting. So, no worries."], ["", "SPK-01", "So, if you are clear with this order then on other list and I already do a one more thing like not only writing your writing, writing your normal text and your point where the presentation of your text even you can insert some links also like if you want to put any reference links in a mark don't say even you can insert reference links also let me show you that. So, use a fuse, wave packets, I am parrying the same. Okay."], ["", "SPK-01", "So, whatever the text you want to represent in the Markdowns and you just write down the text in wave packets. But, of course, I am writing click here. Now, when you are clicking on this text, page you want to open that page link you provide in the parent."], ["", "SPK-01", "If let us suppose I want to open Python official website which is Python.org. So, whenever I am clicking on the click here link or click here hyper link, I want to redirect it to this this homepage of python.org. Now I am providing this website here in parandas."], ["", "SPK-01", "Now I am disclosing this. Now you just try to understand. In swear brackets write down some text, in parandas is this bracketing known as parandas is technically in this parandas is you provide the URL which you want to link to this text."], ["", "SPK-01", "Now, when you link any URL to link or a link to text, this is known as a hyper link. Now, what you are doing here, you are linking one URL to a normal text. Then it becomes a hyper link."], ["", "SPK-01", "Now, you can see on the line and your text coloring glue, which indicates a representation of a hyper lake. So after writing this, you just click on run search, hit on run. Now you can see your text in this way."], ["", "SPK-01", "Now when you click on this, it will react to you to a new tap and this is the the URL which is linked to that text. So this is very, very important whenever you want to put any references any your Jupyter notebook you can use this Markdown cell hyperlink concept. So on this writing here in 13 hyperlink I hope it is clear so not only in 13 even you can insert images also."], ["", "SPK-01", "I'll tell you. So the syntax and everything is same. If you want to insert any image, so you just need to put an explanatory mask before this."], ["", "SPK-01", "And the remaining everything is same. So if you want to insert any image, which is the area in your image in, or which is there in your computer, then you just provide the part of the image. So, I, as I know I have no images, so I am just taking any image from the browser."], ["", "SPK-01", "So, this take any image from the browser. Okay, so let us take this image. So, give a right click on it."], ["", "SPK-01", "And now you just click on copy image address. Okay, don't go with any other ingredients. You just click on copy image address and then use that image address in this parent's list."], ["", "SPK-01", "All of this is very, very big or better go with some other image. So, it is very, very big or actual. Okay."], ["", "SPK-01", "So, now let me check with this image address. Okay. Now as this cockpit image address here, now if or any image is not available at this address, you can display a normal text."], ["", "SPK-01", "So that can be written inside this. If image exists with this link that image is going to be loaded, if not, this EIMG text is going to be displayed. Okay, let me run this and you can see an image is inserted and the Jupiter part."], ["", "SPK-01", "So, this is how you can insert an image also not only an image using the same syntax, you can insert an audio, you can insert a video, all the multimedia can be inserted using the same notation. So, these things are necessary for you to know when you are working with Mark themselves. So, these are the things one is heading and then writing a normal tip and then this point was representation which is nothing but order, leaves and unordered list and then inserting hyperlinks and inserting images."], ["", "SPK-01", "So, these things are necessary for you to know. You just give a trial on inserting a hyperlink and image. If you have any questions, do let me know."], ["", "SPK-01", "If we have no question we can wind up the session for now. This gives me confirmation if we are with these things whatever we discussed into this session. Done."], ["", "SPK-01", "Great. Yes. That is it for today."], ["", "SPK-01", "So we will meet again tomorrow. Thank you all."]];
-$('#dz').onclick=()=>$('#fl').click();
-$('#fl').onchange=e=>{const f=e.target.files[0];if(!f)return;if(API)return apiAnalyze(f);$('#pg').style.display='block';$('#res').style.display='none';const st=['Extracting audio…','Transcribing speech…','Identifying speakers…','Writing summary & quiz…'];let i=0,t0=Date.now();
-const iv=setInterval(()=>{i++;$('#pb').style.width=Math.min(i*20,100)+'%';$('#pt').textContent=st[Math.min(Math.floor(i/1.3),3)];if(i>=5){clearInterval(iv);$('#pg').style.display='none';show(f.name,((Date.now()-t0)/1000).toFixed(1))}},420)};
-function show(n,t){if(D){const b=$('#bn');b.style.display=D.demo?'':'none';b.innerHTML='⚠ <b>Demo mode.</b> The server has no speech-to-text key, so it is showing the built-in sample transcript instead of your video. See the README to turn on real transcription.'}$('#res').style.display='block';$('#tm').textContent=t;
-$('#sm').textContent=D?D.summary:`File: ${n}. Topic: formatting text in Jupyter Notebook Markdown cells. The instructor (SPK-01) explains the difference between ordered and unordered lists, then shows how to insert hyperlinks and images, and closes by asking learners to practise. Every spoken word is in the full transcript below.`;
-$('#sp').innerHTML=D?spk():'<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><div class="av" style="width:36px;height:36px;font-size:16px;margin:0">01</div><div><b>SPK-01</b><div class="mut">Speaker ID · the only voice in the recording</div></div></div>';
-$('#ft').innerHTML=FT.map(l=>`<p>${l[0]?'<span class="mut">['+esc(l[0])+']</span> ':''}<b style="color:var(--ac)">${esc(l[1])}:</b> ${esc(l[2])}</p>`).join('');
-$('#kp').innerHTML=(D?D.keyPoints:['Ordered lists use numbering; unordered lists use different symbols (filled circles, filled squares, empty circles) to separate main points from sub-points.','Hyperlinks: display text in square brackets, then the URL in parentheses.','Images use the hyperlink syntax preceded by an exclamation mark (!); the bracket text is shown if the image fails to load.','The same notation can also insert audio, video and other media.']).map(x=>`<li>${esc(x)}</li>`).join('');
-const tk=D?D.tasks.map(t=>[t.task,t.owner,t.due]):[['Try inserting a hyperlink and an image in a Markdown cell','Everyone','the next session'],['Attend the next session','Everyone','tomorrow']];
-$('#tk').innerHTML=tk.map((t,i)=>`<div style="margin:8px 0;padding:10px;border:1px solid var(--bd);border-radius:12px"><b>${esc(t[0])}</b><div class="mut">${esc(t[1])} · due ${esc(t[2])}</div><button class="btn g" style="padding:6px 12px;margin-top:6px" data-i="${i}">✉ Email alert</button></div>`).join('');
-$$('#tk button').forEach(b=>b.onclick=()=>{if(D)return sendAlert(b);b.textContent='✓ Alert sent';toast('Demo: alert would be sent to '+user.email)});
-$('#qt').innerHTML='';Object.keys(quiz).forEach((k,i)=>{const b=document.createElement('button');b.className='btn g'+(i?'':' on');b.textContent=k;b.onclick=()=>{$$('#qt button').forEach(x=>x.classList.toggle('on',x==b));q(k)};$('#qt').appendChild(b)});q('Easy');extras()}
-function q(k){qOk=qTot=0;$('#sc').textContent='';$('#qb').innerHTML='';quiz[k].forEach(([t,o,a])=>{const d=document.createElement('div');d.innerHTML=`<p><b>${esc(t)}</b></p>`;o.forEach((x,i)=>{const b=document.createElement('button');b.className='opt';b.textContent=x;b.onclick=()=>{[...d.querySelectorAll('.opt')].forEach((y,j)=>{y.disabled=true;if(j==a)y.classList.add('ok')});if(i!=a)b.classList.add('no');qTot++;if(i==a)qOk++;$('#sc').textContent=qOk+' / '+qTot+' correct'};d.appendChild(b)});$('#qb').appendChild(d)})}
+/* Multi-Person Analyzer Transcript: (Time, ID, Transcript) */
+let people = ['SPK-01', 'SPK-02', 'SPK-03', 'SPK-04'];
+let quiz = {
+  Easy: [
+    ['What do ordered lists use to sequence points?', ['Sequential numbering (1, 2, 3)', 'Geometric symbols only', 'Random colored bullets'], 0],
+    ['Which symbol is used for the top-level main point in an unordered list?', ['A filled circle', 'A triangle', 'A numbered bracket'], 0],
+    ['Which tool was used by Prof. Sharma to demonstrate Markdown cells?', ['Jupyter Notebook', 'Microsoft Word', 'Adobe Acrobat'], 0],
+    ['What character is placed at the very start to embed an image in Markdown?', ['Exclamation mark (!)', 'Ampersand (&)', 'Dollar sign ($)'], 0],
+    ['Where does the URL go when writing a Markdown hyperlink?', ['Inside parentheses ( )', 'Inside curly braces { }', 'Inside quotation marks " "'], 0]
+  ],
+  Medium: [
+    ['How does the Markdown renderer visually differentiate main points from nested sub-points?', ['By alternating symbols: filled circle for main, square for sub-1, empty circle for sub-2', 'By only changing the font color to blue', 'It does not differentiate them at all'], 0],
+    ['Where does the clickable display text go in a Markdown hyperlink?', ['Inside square brackets [ ]', 'Inside round parentheses ( )', 'Inside angle brackets < >'], 0],
+    ['What gets displayed if an image address is broken or unreachable in Markdown?', ['The alt text written inside the square brackets', 'A blank white error page', 'The entire notebook file is corrupted'], 0],
+    ['Can audio and video multimedia also be incorporated into Markdown cells?', ['Yes, using compatible Markdown or HTML embedding tags', 'No, Markdown only supports plain unformatted text', 'Only if written in binary C++ code'], 0],
+    ['What visual indication shows that a hyperlink was rendered successfully in Markdown?', ['The text is highlighted in blue and underlined', 'The text turns bright red and italicized', 'The cell is replaced with a popup modal'], 0]
+  ],
+  Hard: [
+    ['Why is descriptive alt text inside the square brackets critical when embedding an image?', ['It provides meaningful fallback text if the remote image fails to load and aids screen readers', 'It encrypts the remote image with an SSL certificate', 'It determines the height and width in pixels automatically'], 0],
+    ['According to the session dialogue, what is the deadline for the practice assignment?', ['Friday at 5 PM', 'Next month', 'End of the semester'], 0],
+    ['In the demonstration, what symbol marks sub-level 1 in an unordered list?', ['A filled square', 'A filled circle', 'An asterisk (*)'], 0],
+    ['What decides whether you should use ordered or unordered lists in your documentation?', ['The context of your data: sequential steps need ordered lists, arbitrary items use unordered', 'Only the Python version number', 'Ordered lists are required for all Markdown cells'], 0],
+    ['How does pairing Markdown explanation cells with code cells benefit data science workflows?', ['It creates clear narrative documentation alongside executable code for better understanding', 'It slows down Python execution speed', 'It converts code into binary machine code'], 0]
+  ]
+};
 
-/* Meeting (UI prototype – needs WebRTC/SFU + STT backend) */
-let tmr=null,names=[];
-const lines=['Let us start with indexing.','Does an index slow down inserts?','Yes, every write must update it.','Can we see an example query?','I will share the EXPLAIN output.','Please submit the diagram by Friday.'];
-function lobby(){clearInterval(tmr);if(rec){const r=rec;rec=null;try{r.stop()}catch(e){}}$('#room').style.display='none';const L=$('#lobby');L.style.display='';
-L.innerHTML=user.role=='host'?`<h3>Host controls</h3><p class="mut">Create a secured room and share the code with attendees.</p><button class="btn" id="mk">+ Start new meeting</button>`
-:`<h3>Join a class</h3><p class="mut">Enter the code from your host.</p><input id="jc" placeholder="Meeting code" maxlength="6" style="text-transform:uppercase"><button class="btn" id="jn">Join meeting</button>`;
-if(user.role=='host')$('#mk').onclick=()=>API?enterRoom(null):start(Math.random().toString(36).slice(2,8).toUpperCase());
-else $('#jn').onclick=()=>{const c=$('#jc').value.trim();c.length>=4?(API?enterRoom(c.toUpperCase()):start(c.toUpperCase())):toast('Enter a valid code')}}
-function start(c){$('#lobby').style.display='none';$('#room').style.display='block';$('#code').textContent=c;names=[user.name];TL=[];render();
-$('#ctl').innerHTML=user.role=='host'?`<button class="btn g" id="c1">🎤 Mute all</button><button class="btn g" id="c2">🔒 Lock room</button><button class="btn g" id="c3">🔴 Record</button><button class="btn r" id="c4">End for all</button>`:`<button class="btn g" id="c1">🎤 Mic</button><button class="btn g" id="c2">✋ Raise hand</button><button class="btn r" id="c4">Leave</button>`;
-$('#c1').onclick=()=>toast(user.role=='host'?'All participants muted':'Mic toggled');$('#c2').onclick=()=>toast(user.role=='host'?'Room locked':'Hand raised');if($('#c3'))$('#c3').onclick=()=>toast('Recording started');$('#c4').onclick=lobby;
-$('#tr').innerHTML='';const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-if(!SR){$('#tr').innerHTML='<p class="mut">Live transcription needs Google Chrome or Microsoft Edge.</p>';return}
-rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang='en-IN';
-rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const tx=e.results[i][0].transcript.trim();if(!tx)continue;const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});TL.push(`[${t}] ${user.name} (${uid()}): ${tx}`);const p=document.createElement('p');p.innerHTML=`<span class="mut">[${t}]</span> <b style="color:var(--ac)">${esc(user.name)} (${uid()}):</b> ${esc(tx)}`;$('#tr').appendChild(p);$('#tr').scrollTop=1e5}};
-rec.onend=()=>{if(rec)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error=='not-allowed'){toast('Allow microphone access to transcribe')}};
-try{rec.start()}catch(e){}}
-function render(){$('#cnt').textContent=names.length;$('#tiles').innerHTML=names.map(x=>`<div class="tile glass" data-n="${x}"><div class="av">${x[0]}</div>${x}</div>`).join('')}
+let FT = [
+  { time: "00:00:00", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "Good morning everyone. Welcome to today's session on Jupyter Notebook Markdown cells and structured documentation." },
+  { time: "00:00:12", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "In ordered lists, you give numbering to points and sub-points. Whereas in unordered lists, you use bullet symbols such as filled circles, filled squares, and empty circles." },
+  { time: "00:00:26", speaker: "SPK-02", name: "Rahul Verma (CM-102941)", text: "Professor, how does the Markdown renderer automatically differentiate a main point from a nested sub-point?" },
+  { time: "00:00:36", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "Good question Rahul. When you indent sub-points with four spaces or a tab, the renderer changes the symbol—giving a filled circle to the main point, a square to sub-level 1, and an open circle to sub-level 2." },
+  { time: "00:00:54", speaker: "SPK-03", name: "Ananya Patel (CM-108253)", text: "Could you also show us how to insert hyperlinks to external documentation like Python.org?" },
+  { time: "00:01:05", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "Certainly Ananya. In square brackets you write the clickable label text, and in parentheses immediately following, you provide the destination URL." },
+  { time: "00:01:22", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "For example, bracket 'Click here' followed by parenthesis 'https://python.org'. Once executed, the text displays with an underline and blue color indicating a valid hyperlink." },
+  { time: "00:01:41", speaker: "SPK-04", name: "David Chen (CM-105190)", text: "What is the syntax for embedding images, and what happens if the image address is broken or unavailable?" },
+  { time: "00:01:54", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "The image syntax is identical to hyperlinks, but prefixed with an exclamation mark: exclamation mark, square brackets for alt text, and parentheses for the image URL." },
+  { time: "00:02:12", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "If the image address is not reachable, the descriptive text inside the square brackets will be displayed as fallback alt text." },
+  { time: "00:02:29", speaker: "SPK-02", name: "Rahul Verma (CM-102941)", text: "Can we embed multimedia like audio and video files using this same Markdown notation?" },
+  { time: "00:02:39", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "Yes, multimedia files can be linked or embedded using standard HTML tags or Markdown tags within the notebook." },
+  { time: "00:02:52", speaker: "SPK-03", name: "Ananya Patel (CM-108253)", text: "Is there any assignment or task for this topic that we need to submit?" },
+  { time: "00:03:02", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "Yes, everyone must practice creating a Markdown document with ordered lists, unordered lists, a hyperlink, and an image fallback. Please submit the notebook by Friday 5 PM." },
+  { time: "00:03:24", speaker: "SPK-04", name: "David Chen (CM-105190)", text: "Got it Professor, thank you! We will practice and submit the assignment on time." },
+  { time: "00:03:36", speaker: "SPK-01", name: "Prof. Sharma (Host)", text: "Great. Thank you all for participating actively. We will meet tomorrow at 10 AM for the next session. Have a great day!" }
+];
 
-/* v3 */
-$('#pe').onclick=()=>{const p=$('#pw');p.type=p.type=='password'?'text':'password'};
-document.addEventListener('keydown',e=>{if(e.key!=='Enter'||!e.target.closest||!e.target.closest('#auth'))return;e.preventDefault();($('#vf').style.display==='block'?$('#vb'):$('#go')).click()});
-const uid=()=>user.id||'CM-'+(1000+Math.abs([...user.email].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7))%9000);
-function remember(em,pw){if(!$('#rm').checked)return;const l=store.get('cm_saved')||[],i=l.findIndex(x=>x.e===em),o={e:em,p:API?'':btoa(pw)};i<0?l.push(o):l[i]=o;store.set('cm_saved',l)}
-function sugg(){const sg=$('#sg'),v=$('#em').value.trim().toLowerCase(),l=(store.get('cm_saved')||[]).filter(x=>mode=='ret'&&(v.length==0||(v.length>=2&&x.e.includes(v))||x.e.startsWith(v))&&x.e!==v).slice(0,5);
-if(!l.length){sg.style.display='none';return}sg.style.display='block';sg.innerHTML='<div class="glass" style="padding:6px">'+l.map(x=>`<div style="display:flex;gap:4px"><button type="button" class="opt" data-e="${esc(x.e)}" style="margin:2px 0">🔑 ${esc(x.e)}</button><button type="button" class="nav" data-f="${esc(x.e)}" title="Forget this login" style="padding:4px 10px">✕</button></div>`).join('')+'</div>';
-sg.querySelectorAll('[data-e]').forEach(b=>b.onmousedown=e=>{e.preventDefault();const x=l.find(y=>y.e===b.dataset.e);$('#em').value=x.e;$('#pw').value=x.p?atob(x.p):'';sg.style.display='none';$('#eh').textContent=x.p?'✓ Saved login filled – press Enter':'✓ Email filled – enter your password';(x.p?$('#go'):$('#pw')).focus()});
-sg.querySelectorAll('[data-f]').forEach(b=>b.onmousedown=e=>{e.preventDefault();store.set('cm_saved',(store.get('cm_saved')||[]).filter(y=>y.e!==b.dataset.f));sugg()})}
-$('#em').addEventListener('input',sugg);$('#em').addEventListener('focus',sugg);$('#em').addEventListener('blur',()=>setTimeout(()=>$('#sg').style.display='none',150));
-let API=false,D=null,vid=null;
-async function api(path,body,method){const r=await fetch(path,{method:method||'POST',headers:{'Content-Type':'application/json','X-Requested-With':'cm'},credentials:'same-origin',body:body?JSON.stringify(body):undefined});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.error||'Request failed');return d}
-async function apiAuth(em,pw,nm){const er=$('#er');er.textContent='';const g=$('#go');g.disabled=true;try{if(mode=='new'){if(!nm)throw new Error('Enter your name.');const d=await api('/api/signup',{name:nm,email:em,password:pw,role:$('#rl').value});pend={em,pw};$('#ve').textContent=em;g.style.display='none';$('#vf').style.display='block';toast(d.devCode?'Dev mode (no email service set): your code is '+d.devCode:'Code sent. Check your inbox.')}else{const d=await api('/api/login',{email:em,password:pw,remember:$('#rm').checked});user=d.user;remember(em,pw);enter()}}catch(e){er.textContent=e.message}g.disabled=false}
-async function apiVerify(){try{const d=await api('/api/verify',{email:pend.em,code:$('#cd').value.trim(),remember:$('#rm').checked});user=d.user;remember(pend.em,pend.pw);enter()}catch(e){$('#er').textContent=e.message}}
-function mmss(ms){const s=Math.floor(ms/1000),f=n=>String(n).padStart(2,'0');return (s>=3600?f(Math.floor(s/3600))+':':'')+f(Math.floor(s%3600/60))+':'+f(s%60)}
-function loadResult(R){D=R;FT=R.transcript.map(l=>[R.demo?'':mmss(l.start),l.speaker,l.text]);quiz={};['Easy','Medium','Hard'].forEach(k=>quiz[k]=(R.quiz[k]||[]).map(x=>[x.q,x.options,x.answer]))}
-const spk=()=>D.speakers.map(x=>`<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><div class="av" style="width:36px;height:36px;font-size:14px;margin:0">${esc(x.id.slice(-2))}</div><div><b>${esc(x.id)}</b><div class="mut">${x.words} words · ${x.share}% of speech</div></div></div>`).join('');
-async function apiAnalyze(f){const pg=$('#pg'),pb=$('#pb'),pt=$('#pt');pg.style.display='block';$('#res').style.display='none';pb.style.width='6%';pt.textContent='Uploading '+f.name+'…';const t0=Date.now();
-try{const r=await fetch('/api/videos?name='+encodeURIComponent(f.name),{method:'PUT',headers:{'X-Requested-With':'cm','Content-Type':f.type||'application/octet-stream'},credentials:'same-origin',body:f});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.error||'Upload failed');
-let prog=12;for(;;){await new Promise(z=>setTimeout(z,1500));const s=await api('/api/videos/'+d.id,null,'GET');if(s.status=='error')throw new Error(s.error||'Processing failed');pt.textContent=s.stage||'Working…';prog=Math.min(prog+6,95);pb.style.width=prog+'%';if(s.status=='done'){vid=d.id;loadResult(s.result);pb.style.width='100%';pg.style.display='none';show(f.name,((Date.now()-t0)/1000).toFixed(1));break}}}
-catch(e){pg.style.display='none';toast(e.message)}$('#fl').value=''}
-async function sendAlert(b){try{b.disabled=true;await api('/api/videos/'+vid+'/alerts',{index:+b.dataset.i});b.textContent='✓ Alert emailed to '+user.email}catch(e){b.disabled=false;toast(e.message)}}
-async function askApi(q){const m=$('#am');m.innerHTML+=`<p><b>You:</b> ${esc(q)}</p>`;$('#aq').value='';try{const d=await api('/api/videos/'+vid+'/ask',{question:q});m.innerHTML+=`<p><b>AI:</b> ${esc(d.answer)}</p>`}catch(e){m.innerHTML+=`<p><b>AI:</b> ${esc(e.message)}</p>`}m.scrollTop=1e5}
-fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d&&'user' in d){API=true;if(d.user){user=d.user;enter()}}}).catch(()=>{});
-let rec=null,TL=[],es=null,isHost=false,locked=false,ppl=[],mic=true;
-async function enterRoom(code){try{if(!code){code=(await api('/api/rooms',{})).code}else{await api('/api/rooms/'+code+'/join',{})}openRoom(code)}catch(e){toast(e.message)}}
-function openRoom(code){$('#lobby').style.display='none';$('#room').style.display='block';$('#code').textContent=code;$('#tr').innerHTML='';TL=[];mic=true;
-$('#tnote').textContent='Everyone\'s speech appears here with their name and ID. Allow the microphone when asked (Chrome or Edge). Audio and video calling needs a media server, see the README.';
-es=new EventSource('/api/rooms/'+code+'/events');
-es.addEventListener('init',e=>{const d=JSON.parse(e.data);isHost=d.host;locked=d.locked;ppl=d.people;d.lines.forEach(addLine);ctl(code);rt()});
-es.addEventListener('people',e=>{ppl=JSON.parse(e.data);rt()});
-es.addEventListener('line',e=>addLine(JSON.parse(e.data)));
-es.addEventListener('lock',e=>{locked=JSON.parse(e.data).locked;ctl(code);toast(locked?'Room locked: nobody new can join':'Room unlocked')});
-es.addEventListener('ended',()=>{closeRoom();toast('The host ended the meeting')});
-es.addEventListener('removed',()=>{closeRoom();toast('You were removed by the host')});
-es.onerror=()=>{if(es&&es.readyState==2){closeRoom();toast('Could not stay connected to the meeting')}};
-startMic(code)}
-function addLine(l){const t=new Date(l.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});TL.push(`[${t}] ${l.name} (${l.id}): ${l.text}`);const p=document.createElement('p');p.innerHTML=`<span class="mut">[${t}]</span> <b style="color:var(--ac)">${esc(l.name)} (${esc(l.id)}):</b> ${esc(l.text)}`;$('#tr').appendChild(p);$('#tr').scrollTop=1e5;const tile=[...$$('.tile')].find(x=>x.dataset.n==l.id);if(tile){tile.classList.add('sp');setTimeout(()=>tile.classList.remove('sp'),2000)}}
-function rt(){$('#cnt').textContent=ppl.length;$('#tiles').innerHTML=ppl.map(x=>`<div class="tile glass" data-n="${esc(x.id)}" style="position:relative"><div class="av">${esc(x.name[0]||'?')}</div>${esc(x.name)}${x.hand?' ✋':''}<div class="mut" style="font-size:11px">${esc(x.id)}</div>${isHost&&x.id!==user.id?`<button class="nav" data-rm="${esc(x.id)}" title="Remove from meeting" style="position:absolute;top:6px;right:6px;padding:4px 8px">✕</button>`:''}</div>`).join('');
-$$('[data-rm]').forEach(b=>b.onclick=()=>api('/api/rooms/'+$('#code').textContent+'/remove',{id:b.dataset.rm}).catch(e=>toast(e.message)))}
-function ctl(code){$('#ctl').innerHTML=(isHost?`<button class="btn g" id="k1">${locked?'🔓 Unlock room':'🔒 Lock room'}</button>`:`<button class="btn g" id="k4">✋ Raise hand</button>`)+`<button class="btn g" id="k5">🎤 Mic: ${mic?'on':'off'}</button><button class="btn g" id="k2">📋 Copy transcript</button><button class="btn r" id="k3">${isHost?'End for all':'Leave'}</button>`;
-$('#k2').onclick=()=>cp(TL.join('\n'),'Transcript copied');
-$('#k5').onclick=e=>{mic=!mic;e.target.textContent='🎤 Mic: '+(mic?'on':'off');if(rec){try{mic?rec.start():rec.stop()}catch(x){}}};
-if(isHost){$('#k1').onclick=()=>api('/api/rooms/'+code+'/lock',{locked:!locked}).catch(e=>toast(e.message));$('#k3').onclick=()=>api('/api/rooms/'+code+'/end',{}).catch(e=>toast(e.message))}
-else{let up=false;$('#k4').onclick=e=>{up=!up;api('/api/rooms/'+code+'/hand',{up}).catch(()=>{});e.target.textContent=up?'✋ Lower hand':'✋ Raise hand'};$('#k3').onclick=closeRoom}}
-function startMic(code){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('Live speech needs Chrome or Edge. You can still read the transcript.');return}
-rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang='en-IN';
-rec.onresult=e=>{if(!mic)return;for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const tx=e.results[i][0].transcript.trim();if(tx)sendLine(code,tx)}};
-rec.onend=()=>{if(rec&&mic)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error=='not-allowed')toast('Allow microphone access to be transcribed')};try{rec.start()}catch(e){}}
-function sendLine(code,text){return api('/api/rooms/'+code+'/line',{text}).catch(()=>{})}
-function closeRoom(){if(es){es.close();es=null}lobby()}const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-let qOk=0,qTot=0,pend=null,vcode='';
-const DISP=['mailinator.com','tempmail.com','10minutemail.com','guerrillamail.com','yopmail.com','trashmail.com'];
-function chk(em){const m=/^[^\s@]+@([^\s@]+\.[a-z]{2,})$/i.exec(em);if(!m)return{ok:0,msg:'Enter a valid email.'};const d=m[1].toLowerCase();if(DISP.includes(d))return{ok:0,msg:'Temporary email domains are not allowed.'};return{ok:1,col:/\.(edu|ac)(\.[a-z]{2})?$/.test(d)}}
-$('#em').oninput=()=>{const v=$('#em').value.trim(),r=chk(v);$('#eh').textContent=!v?'':!r.ok?'⚠ '+r.msg:r.col?'🎓 College email detected':'✓ Format OK – a code will confirm it exists'};
-$('#vb').onclick=()=>{if(API)return apiVerify();if($('#cd').value.trim()!==vcode)return $('#er').textContent='Incorrect code. Check your inbox and try again.';const u=store.get('cm_users')||{};u[pend.em]={name:pend.nm,pw:btoa(pend.pw),role:pend.role,verified:true,id:'CM-'+(1000+Math.floor(Math.random()*9000))};store.set('cm_users',u);user={email:pend.em,...u[pend.em]};remember(pend.em,pend.pw);enter()};
-function go(v){$$('.nav').forEach(x=>x.classList.toggle('on',x.dataset.v==v));['v0','v1','v2','v3','v4'].forEach(k=>$('#'+k).style.display=k==v?'':'none');$('#ask').style.display=v=='v1'&&$('#res').style.display=='block'?'block':'none';$('#ap').style.display='none';reveal();scrollTo({top:0,behavior:'smooth'})}
-$$('.nav').forEach(b=>b.onclick=()=>go(b.dataset.v));$$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
-const io='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);const t=e.target;setTimeout(()=>t.style.transitionDelay='0ms',900)}}),{threshold:.06}):null;
-function reveal(){$$('.card:not(.in)').forEach((c,i)=>{c.classList.add('rv');c.style.transitionDelay=Math.min(i%6,5)*80+'ms';io?io.observe(c):c.classList.add('in')})}
-document.addEventListener('click',e=>{const b=e.target.closest('.btn');if(!b)return;const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height),s=document.createElement('span');s.className='rip';s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;b.appendChild(s);setTimeout(()=>s.remove(),600)});
-function cp(t,m){try{navigator.clipboard.writeText(t).then(()=>toast(m),()=>toast('Copy blocked by browser'))}catch(e){toast('Copy blocked by browser')}}
-function extras(){
-$('#ins').innerHTML=(D?D.insights:['Markdown cells in Jupyter Notebooks let you present information clearly with formatted lists, hyperlinks and embedded media.','Descriptive text inside the brackets of an image ensures alternative text is shown if the image URL is broken or unavailable.']).map(x=>`<li>${esc(x)}</li>`).join('');
-const fc=D?D.flashcards.map(f=>[f.q,f.a]):[['How do ordered and unordered lists differ in Markdown?','Ordered lists use numbering; unordered lists use symbols to separate main points and sub-points.'],['What is the Markdown syntax for a hyperlink?','Display text in square brackets followed by the URL in parentheses.'],['Which character starts the syntax to embed an image?','An exclamation mark (!).'],['What happens if the image URL is unavailable?','The text inside the square brackets is displayed.']];
-$('#fcs').innerHTML=fc.map(c=>`<div class="fl"><div class="fc"><div>${esc(c[0])}</div><div>${esc(c[1])}</div></div></div>`).join('');
-$$('.fc').forEach(c=>c.onclick=()=>c.classList.toggle('on'));
-$('#cs').onclick=()=>cp($('#sm').textContent+'\n\n'+FT.map(l=>l[1]+': '+l[2]).join('\n'),'Summary and full transcript copied');
-$('#ca').onclick=()=>{if(D){api('/api/videos/'+vid+'/alerts',{}).then(r=>{$$('#tk button').forEach(b=>b.textContent='✓ Alert emailed');toast(r.sent+' task alert(s) emailed to '+user.email)}).catch(e=>toast(e.message));return}$$('#tk button').forEach(b=>b.click());toast('Demo: 3 task alerts queued for '+user.email)};
-$('#tt').onclick=()=>{const f=$('#ft');f.style.display=f.style.display=='none'?'':'none'};
-$('#ask').style.display='block';reveal()}
-$('#ask').onclick=()=>{const p=$('#ap');p.style.display=p.style.display=='block'?'none':'block'};
-function ans(){const q=$('#aq').value.trim();if(!q)return;if(D)return askApi(q);const w=q.toLowerCase().match(/[a-z0-9]{3,}/g)||[];let best=null,bs=0;FT.forEach(l=>{const n=w.filter(x=>l[2].toLowerCase().includes(x)).length;if(n>bs){bs=n;best=l}});const m=$('#am');m.innerHTML+=`<p><b>You:</b> ${q.replace(/</g,'&lt;')}</p><p><b>AI:</b> ${best?`${best[1]} said: ${best[2]}`:'I could not find that in this video.'}</p>`;m.scrollTop=1e5;$('#aq').value=''}
-$('#ctr').onclick=()=>cp(TL.join('\n'),'Transcript copied');$('#as').onclick=ans;$('#aq').onkeydown=e=>{if(e.key=='Enter')ans()};
+let ftViewMode = 'cards', ftSearchQuery = '', ftSpeakerFilter = 'all';
+
+function renderFT() {
+  const container = $('#ft');
+  if (!container) return;
+  const q = ftSearchQuery.trim().toLowerCase();
+  const filterSel = $('#ft-filter');
+  if (filterSel) {
+    const cur = filterSel.value;
+    const spkMap = new Map();
+    FT.forEach(l => spkMap.set(l.speaker, l.name || l.speaker));
+    filterSel.innerHTML = '<option value="all">All Speakers (Everyone)</option>' +
+      [...spkMap.entries()].map(([k, v]) => `<option value="${esc(k)}">${esc(v)} (${esc(k)})</option>`).join('');
+    if (cur && (cur === 'all' || spkMap.has(cur))) filterSel.value = cur;
+  }
+  const filtered = FT.filter(l => {
+    if (ftSpeakerFilter !== 'all' && l.speaker !== ftSpeakerFilter) return false;
+    if (!q) return true;
+    return l.text.toLowerCase().includes(q) || (l.name && l.name.toLowerCase().includes(q)) || l.speaker.toLowerCase().includes(q) || (l.time && l.time.includes(q));
+  });
+  const countBadge = $('#ft-count');
+  if (countBadge) countBadge.textContent = `${filtered.length} of ${FT.length} lines`;
+  if (!filtered.length) {
+    container.innerHTML = `<div class="mut" style="text-align:center;padding:28px">No lines matched "${esc(q)}". Try a different keyword or reset filters.</div>`;
+    return;
+  }
+  if (ftViewMode === 'cards') {
+    container.innerHTML = filtered.map(l => {
+      const st = speakerStyle(l.speaker);
+      const ini = initials(l.name);
+      return `<div class="tr-card">
+        <div class="tr-hdr">
+          <div class="tr-speaker-tag">
+            <span class="tr-av" style="background:${st.bg}">${ini}</span>
+            <span>${esc(l.name || l.speaker)}</span>
+            <span class="tr-id-pill" style="background:${st.badge};color:${st.badgeTx}">${esc(l.speaker)}</span>
+          </div>
+          <span class="tr-time-pill">⏱ ${esc(l.time || '00:00:00')}</span>
+        </div>
+        <p class="tr-text">${highlight(l.text, q)}</p>
+      </div>`;
+    }).join('');
+  } else {
+    container.innerHTML = `<div class="tr-table-wrap">
+      <table class="tr-table">
+        <thead>
+          <tr>
+            <th style="width:115px">Time</th>
+            <th style="width:230px">ID / Speaker</th>
+            <th>Transcript (Words Spoken)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(l => {
+            const st = speakerStyle(l.speaker);
+            const ini = initials(l.name);
+            return `<tr>
+              <td><span class="tr-time-pill">⏱ ${esc(l.time || '00:00:00')}</span></td>
+              <td>
+                <div class="tr-speaker-tag">
+                  <span class="tr-av" style="background:${st.bg}">${ini}</span>
+                  <div>
+                    <div><b>${esc(l.name || l.speaker)}</b></div>
+                    <span class="tr-id-pill" style="background:${st.badge};color:${st.badgeTx}">${esc(l.speaker)}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="tr-text">${highlight(l.text, q)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+}
+
+/* File Download Helpers */
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function exportCSV(lines, filename) {
+  const rows = ['"Time","ID","Name","Transcript"'];
+  for (const l of lines) rows.push(`"${l.time || ''}","${l.speaker || l.id || ''}","${(l.name || '').replace(/"/g, '""')}","${(l.text || '').replace(/"/g, '""')}"`);
+  downloadFile(rows.join('\r\n'), filename, 'text/csv;charset=utf-8');
+  toast('CSV exported');
+}
+function exportTXT(lines, filename) {
+  const rows = lines.map(l => `[${l.time || '00:00:00'}] [${l.speaker || l.id}] ${l.name}: ${l.text}`);
+  downloadFile(rows.join('\r\n'), filename, 'text/plain;charset=utf-8');
+  toast('TXT exported');
+}
+
+/* Video Analyzer Events */
+$('#dz').onclick = () => $('#fl').click();
+$('#fl').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (API) return apiAnalyze(f);
+  $('#pg').style.display = 'block';
+  $('#res').style.display = 'none';
+  const st = ['Extracting audio…', 'Transcribing speech…', 'Identifying speakers…', 'Writing summary & quiz…'];
+  let i = 0, t0 = Date.now();
+  const iv = setInterval(() => {
+    i++;
+    $('#pb').style.width = Math.min(i * 20, 100) + '%';
+    $('#pt').textContent = st[Math.min(Math.floor(i / 1.3), 3)];
+    if (i >= 5) {
+      clearInterval(iv);
+      $('#pg').style.display = 'none';
+      show(f.name, ((Date.now() - t0) / 1000).toFixed(1));
+    }
+  }, 420);
+};
+
+function show(n, t) {
+  if (D) {
+    const b = $('#bn');
+    b.style.display = D.demo ? '' : 'none';
+    b.innerHTML = '⚠ <b>Demo mode.</b> Showing sample multi-person transcript with 4 active speakers, timestamps and quiz. Add ASSEMBLYAI_API_KEY to process raw video audio.';
+  }
+  $('#res').style.display = 'block';
+  $('#tm').textContent = t;
+  $('#sm').textContent = D ? D.summary : `Interactive session hosted by Prof. Sharma (SPK-01) with Rahul (SPK-02), Ananya (SPK-03) and David (SPK-04). Covered Markdown lists, hyperlinks and images.`;
+  $('#sp').innerHTML = D ? spk() : `<div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;border:1px solid var(--bd)"><span class="tr-av" style="background:#2563eb">PS</span><div><b>Prof. Sharma</b> <span class="mut">(SPK-01)</span></div></div>
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;border:1px solid var(--bd)"><span class="tr-av" style="background:#059669">RV</span><div><b>Rahul Verma</b> <span class="mut">(SPK-02)</span></div></div>
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;border:1px solid var(--bd)"><span class="tr-av" style="background:#7c3aed">AP</span><div><b>Ananya Patel</b> <span class="mut">(SPK-03)</span></div></div>
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;border:1px solid var(--bd)"><span class="tr-av" style="background:#d97706">DC</span><div><b>David Chen</b> <span class="mut">(SPK-04)</span></div></div>
+  </div>`;
+  renderFT();
+  $('#kp').innerHTML = (D ? D.keyPoints : [
+    '[00:00] Prof. Sharma explains Markdown cells and formatting in Jupyter Notebook.',
+    '[00:12] Ordered lists use numbering; unordered lists use tiered geometric bullets.',
+    '[00:36] Sub-point indentation changes symbols from filled circle to square and empty circle.',
+    '[01:05] Hyperlink notation: bracketed label [text] followed immediately by URL in parentheses (url).',
+    '[01:54] Image notation starts with exclamation mark ![alt](url) with fallback alt text.',
+    '[03:02] Assignment given: practice Markdown cells, due Friday at 5 PM.'
+  ]).map(x => `<li>${esc(x)}</li>`).join('');
+  const tk = D ? D.tasks.map(t => [t.task, t.owner, t.due]) : [
+    ['Create Markdown practice document with ordered & unordered lists, hyperlink and image fallback', 'Everyone', 'Friday 5 PM'],
+    ['Review image fallback alt text notation', 'Rahul & David', 'before next class'],
+    ['Attend the next Jupyter session', 'Everyone', 'tomorrow 10 AM']
+  ];
+  $('#tk').innerHTML = tk.map((t, i) => `<div style="margin:8px 0;padding:10px;border:1px solid var(--bd);border-radius:12px"><b>${esc(t[0])}</b><div class="mut">${esc(t[1])} · due ${esc(t[2])}</div><button class="btn g" style="padding:6px 12px;margin-top:6px" data-i="${i}">✉ Email alert</button></div>`).join('');
+  $$('#tk button').forEach(b => b.onclick = () => { if (D) return sendAlert(b); b.textContent = '✓ Alert sent'; toast('Demo: alert sent to ' + user.email); });
+  $('#qt').innerHTML = '';
+  Object.keys(quiz).forEach((k, i) => {
+    const b = document.createElement('button');
+    b.className = 'btn g' + (i ? '' : ' on');
+    b.textContent = k;
+    b.onclick = () => { $$('#qt button').forEach(x => x.classList.toggle('on', x == b)); q(k); };
+    $('#qt').appendChild(b);
+  });
+  q('Easy');
+  extras();
+}
+
+function q(k) {
+  qOk = qTot = 0;
+  $('#sc').textContent = '';
+  $('#qb').innerHTML = '';
+  (quiz[k] || []).forEach(([t, o, a]) => {
+    const d = document.createElement('div');
+    d.innerHTML = `<p><b>${esc(t)}</b></p>`;
+    o.forEach((x, i) => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.textContent = x;
+      b.onclick = () => {
+        [...d.querySelectorAll('.opt')].forEach((y, j) => { y.disabled = true; if (j == a) y.classList.add('ok'); });
+        if (i != a) b.classList.add('no');
+        qTot++;
+        if (i == a) qOk++;
+        $('#sc').textContent = qOk + ' / ' + qTot + ' correct';
+      };
+      d.appendChild(b);
+    });
+    $('#qb').appendChild(d);
+  });
+}
+
+/* Video Transcript Toolbar Events */
+$('#ft-view-cards').onclick = () => { ftViewMode = 'cards'; $('#ft-view-cards').classList.add('on'); $('#ft-view-table').classList.remove('on'); renderFT(); };
+$('#ft-view-table').onclick = () => { ftViewMode = 'table'; $('#ft-view-table').classList.add('on'); $('#ft-view-cards').classList.remove('on'); renderFT(); };
+$('#ft-search').oninput = e => { ftSearchQuery = e.target.value; renderFT(); };
+$('#ft-filter').onchange = e => { ftSpeakerFilter = e.target.value; renderFT(); };
+$('#ft-copy').onclick = () => cp(FT.map(l => `[${l.time}] [${l.speaker}] ${l.name}: ${l.text}`).join('\n'), 'Transcript copied with Time & IDs');
+$('#ft-csv').onclick = () => exportCSV(FT, 'video-transcript.csv');
+$('#ft-txt').onclick = () => exportTXT(FT, 'video-transcript.txt');
+$('#tt').onclick = () => { const w = $('#ft-wrap'); w.style.display = w.style.display === 'none' ? '' : 'none'; };
+
+/* Meeting section: Live Multi-Person Transcript */
+let tmr = null, names = [], MLINES = [], mtViewMode = 'cards', mtSearchQuery = '', mtSpeakerFilter = 'all';
+
+function renderMeetingTranscript() {
+  const container = $('#tr');
+  if (!container) return;
+  const q = mtSearchQuery.trim().toLowerCase();
+  const filterSel = $('#mt-filter');
+  if (filterSel) {
+    const cur = filterSel.value;
+    const seen = new Map();
+    MLINES.forEach(l => seen.set(l.id, l.name));
+    filterSel.innerHTML = '<option value="all">All Participants</option>' +
+      [...seen.entries()].map(([k, v]) => `<option value="${esc(k)}">${esc(v)} (${esc(k)})</option>`).join('');
+    if (cur && (cur === 'all' || seen.has(cur))) filterSel.value = cur;
+  }
+  const filtered = MLINES.filter(l => {
+    if (mtSpeakerFilter !== 'all' && l.id !== mtSpeakerFilter) return false;
+    if (!q) return true;
+    return l.text.toLowerCase().includes(q) || l.name.toLowerCase().includes(q) || l.id.toLowerCase().includes(q) || (l.time && l.time.includes(q));
+  });
+  const countBadge = $('#mt-count');
+  if (countBadge) countBadge.textContent = `${filtered.length} lines`;
+  if (!filtered.length) {
+    container.innerHTML = `<p class="mut" style="text-align:center;padding:24px">${MLINES.length ? 'No lines matched your search.' : 'Waiting for speech… Speak into your microphone or tap "✨ Simulate Discussion" to test multi-person dialogue.'}</p>`;
+    return;
+  }
+  if (mtViewMode === 'cards') {
+    container.innerHTML = filtered.map(l => {
+      const st = speakerStyle(l.id);
+      const ini = initials(l.name);
+      return `<div class="tr-card">
+        <div class="tr-hdr">
+          <div class="tr-speaker-tag">
+            <span class="tr-av" style="background:${st.bg}">${ini}</span>
+            <span>${esc(l.name)}</span>
+            <span class="tr-id-pill" style="background:${st.badge};color:${st.badgeTx}">${esc(l.id)}</span>
+          </div>
+          <span class="tr-time-pill">⏱ ${esc(l.time)}</span>
+        </div>
+        <p class="tr-text">${highlight(l.text, q)}</p>
+      </div>`;
+    }).join('');
+  } else {
+    container.innerHTML = `<div class="tr-table-wrap">
+      <table class="tr-table">
+        <thead>
+          <tr>
+            <th style="width:115px">Time</th>
+            <th style="width:230px">ID / Participant</th>
+            <th>Transcript (Words Spoken)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(l => {
+            const st = speakerStyle(l.id);
+            const ini = initials(l.name);
+            return `<tr>
+              <td><span class="tr-time-pill">⏱ ${esc(l.time)}</span></td>
+              <td>
+                <div class="tr-speaker-tag">
+                  <span class="tr-av" style="background:${st.bg}">${ini}</span>
+                  <div>
+                    <div><b>${esc(l.name)}</b></div>
+                    <span class="tr-id-pill" style="background:${st.badge};color:${st.badgeTx}">${esc(l.id)}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="tr-text">${highlight(l.text, q)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+  const autoscroll = $('#mt-autoscroll');
+  if (autoscroll && autoscroll.checked) {
+    const wrap = $('#mt-wrap');
+    if (wrap) wrap.scrollTop = wrap.scrollHeight;
+  }
+}
+
+function lobby() {
+  clearInterval(tmr);
+  if (rec) { const r = rec; rec = null; try { r.stop(); } catch (e) {} }
+  $('#room').style.display = 'none';
+  const L = $('#lobby');
+  L.style.display = '';
+  L.innerHTML = user.role == 'host' ?
+    `<h3>Host controls</h3><p class="mut">Create a secured room and share the code with attendees.</p><button class="btn" id="mk">+ Start new meeting</button>` :
+    `<h3>Join a class</h3><p class="mut">Enter the code from your host.</p><input id="jc" placeholder="Meeting code" maxlength="6" style="text-transform:uppercase"><button class="btn" id="jn">Join meeting</button>`;
+  if (user.role == 'host') $('#mk').onclick = () => API ? enterRoom(null) : start(Math.random().toString(36).slice(2, 8).toUpperCase());
+  else $('#jn').onclick = () => { const c = $('#jc').value.trim(); c.length >= 4 ? (API ? enterRoom(c.toUpperCase()) : start(c.toUpperCase())) : toast('Enter a valid code'); };
+}
+
+function start(c) {
+  $('#lobby').style.display = 'none';
+  $('#room').style.display = 'block';
+  $('#code').textContent = c;
+  names = [user.name];
+  MLINES = [];
+  TL = [];
+  render();
+  renderMeetingTranscript();
+  $('#ctl').innerHTML = user.role == 'host' ?
+    `<button class="btn g" id="c1">🎤 Mute all</button><button class="btn g" id="c2">🔒 Lock room</button><button class="btn g" id="c3">🔴 Record</button><button class="btn r" id="c4">End for all</button>` :
+    `<button class="btn g" id="c1">🎤 Mic</button><button class="btn g" id="c2">✋ Raise hand</button><button class="btn r" id="c4">Leave</button>`;
+  $('#c1').onclick = () => toast(user.role == 'host' ? 'All participants muted' : 'Mic toggled');
+  $('#c2').onclick = () => toast(user.role == 'host' ? 'Room locked' : 'Hand raised');
+  if ($('#c3')) $('#c3').onclick = () => toast('Recording started');
+  $('#c4').onclick = lobby;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Google Chrome or Edge recommended for live speech recognition.'); return; }
+  rec = new SR(); rec.continuous = true; rec.interimResults = false; rec.lang = 'en-IN';
+  rec.onresult = e => {
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        const tx = e.results[i][0].transcript.trim();
+        if (tx) addLine({ id: uid(), name: user.name, text: tx, ts: Date.now() });
+      }
+    }
+  };
+  rec.onend = () => { if (rec) try { rec.start(); } catch (e) {} };
+  rec.onerror = e => { if (e.error == 'not-allowed') toast('Allow microphone access to transcribe'); };
+  try { rec.start(); } catch (e) {}
+}
+
+function render() {
+  $('#cnt').textContent = names.length;
+  $('#tiles').innerHTML = names.map(x => `<div class="tile glass" data-n="${esc(x)}"><div class="av">${esc(x[0] || '?')}</div>${esc(x)}</div>`).join('');
+}
+
+/* Meeting Transcript Toolbar Events */
+$('#mt-view-cards').onclick = () => { mtViewMode = 'cards'; $('#mt-view-cards').classList.add('on'); $('#mt-view-table').classList.remove('on'); renderMeetingTranscript(); };
+$('#mt-view-table').onclick = () => { mtViewMode = 'table'; $('#mt-view-table').classList.add('on'); $('#mt-view-cards').classList.remove('on'); renderMeetingTranscript(); };
+$('#mt-search').oninput = e => { mtSearchQuery = e.target.value; renderMeetingTranscript(); };
+$('#mt-filter').onchange = e => { mtSpeakerFilter = e.target.value; renderMeetingTranscript(); };
+$('#ctr').onclick = () => cp(MLINES.map(l => `[${l.time}] [${l.id}] ${l.name}: ${l.text}`).join('\n'), 'Meeting transcript copied');
+$('#mt-csv').onclick = () => exportCSV(MLINES, `meeting-${$('#code').textContent || 'transcript'}.csv`);
+$('#mt-txt').onclick = () => exportTXT(MLINES, `meeting-${$('#code').textContent || 'transcript'}.txt`);
+
+$('#mt-sim').onclick = async () => {
+  const code = $('#code').textContent;
+  toast('Simulating multi-person discussion…');
+  if (API && code) {
+    try {
+      await api('/api/rooms/' + code + '/simulate', {});
+      return;
+    } catch (e) {}
+  }
+  const dialogues = [
+    { id: 'CM-102941', name: 'Rahul Verma', text: 'Good morning everyone! Can everyone see the screen clearly?' },
+    { id: 'CM-108253', name: 'Ananya Patel', text: 'Yes, audio and video are crystal clear. Thanks Rahul!' },
+    { id: 'CM-105190', name: 'David Chen', text: 'Could we clarify the expected submission format for the assignment?' },
+    { id: user ? user.id : 'CM-100010', name: user ? user.name : 'Prof. Sharma', text: 'Please submit a single Markdown file (.md) or exported Jupyter notebook (.ipynb).' },
+    { id: 'CM-102941', name: 'Rahul Verma', text: 'Understood. Should we include sample images and link references as well?' },
+    { id: user ? user.id : 'CM-100010', name: user ? user.name : 'Prof. Sharma', text: 'Yes, make sure your image links contain proper alt text descriptions.' },
+    { id: 'CM-108253', name: 'Ananya Patel', text: 'Thank you! We will finalize our documents and submit on time.' }
+  ];
+  let delay = 0;
+  dialogues.forEach(item => {
+    setTimeout(() => {
+      addLine({ ...item, ts: Date.now() });
+      if (!names.includes(item.name)) { names.push(item.name); render(); }
+    }, delay);
+    delay += 700;
+  });
+};
+
+/* Auth & Backend API bindings */
+$('#pe').onclick = () => { const p = $('#pw'); p.type = p.type == 'password' ? 'text' : 'password'; };
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.closest || !e.target.closest('#auth')) return;
+  e.preventDefault();
+  ($('#vf').style.display === 'block' ? $('#vb') : $('#go')).click();
+});
+const uid = () => (user && user.id) || 'CM-' + (1000 + Math.abs([...((user && user.email) || 'guest')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7)) % 9000);
+function remember(em, pw) {
+  if (!$('#rm').checked) return;
+  const l = store.get('cm_saved') || [], i = l.findIndex(x => x.e === em), o = { e: em, p: API ? '' : btoa(pw) };
+  i < 0 ? l.push(o) : l[i] = o;
+  store.set('cm_saved', l);
+}
+function sugg() {
+  const sg = $('#sg'), v = $('#em').value.trim().toLowerCase();
+  const l = (store.get('cm_saved') || []).filter(x => mode == 'ret' && (v.length == 0 || (v.length >= 2 && x.e.includes(v)) || x.e.startsWith(v)) && x.e !== v).slice(0, 5);
+  if (!l.length) { sg.style.display = 'none'; return; }
+  sg.style.display = 'block';
+  sg.innerHTML = '<div class="glass" style="padding:6px">' + l.map(x => `<div style="display:flex;gap:4px"><button type="button" class="opt" data-e="${esc(x.e)}" style="margin:2px 0">🔑 ${esc(x.e)}</button><button type="button" class="nav" data-f="${esc(x.e)}" title="Forget this login" style="padding:4px 10px">✕</button></div>`).join('') + '</div>';
+  sg.querySelectorAll('[data-e]').forEach(b => b.onmousedown = e => {
+    e.preventDefault();
+    const x = l.find(y => y.e === b.dataset.e);
+    $('#em').value = x.e;
+    $('#pw').value = x.p ? atob(x.p) : '';
+    sg.style.display = 'none';
+    $('#eh').textContent = x.p ? '✓ Saved login filled – press Enter' : '✓ Email filled – enter your password';
+    (x.p ? $('#go') : $('#pw')).focus();
+  });
+  sg.querySelectorAll('[data-f]').forEach(b => b.onmousedown = e => {
+    e.preventDefault();
+    store.set('cm_saved', (store.get('cm_saved') || []).filter(y => y.e !== b.dataset.f));
+    sugg();
+  });
+}
+$('#em').addEventListener('input', sugg);
+$('#em').addEventListener('focus', sugg);
+$('#em').addEventListener('blur', () => setTimeout(() => $('#sg').style.display = 'none', 150));
+
+let API = false, D = null, vid = null;
+async function api(path, body, method) {
+  const r = await fetch(path, {
+    method: method || 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'cm' },
+    credentials: 'same-origin',
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let d = {};
+  try { d = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(d.error || 'Request failed');
+  return d;
+}
+
+async function apiAuth(em, pw, nm) {
+  const er = $('#er'); er.textContent = '';
+  const g = $('#go'); g.disabled = true;
+  try {
+    if (mode == 'new') {
+      if (!nm) throw new Error('Enter your name.');
+      const d = await api('/api/signup', { name: nm, email: em, password: pw, role: $('#rl').value });
+      pend = { em, pw };
+      $('#ve').textContent = em;
+      g.style.display = 'none';
+      $('#vf').style.display = 'block';
+      toast(d.devCode ? 'Dev mode (no email set): verification code is ' + d.devCode : 'Code sent. Check your inbox.');
+    } else {
+      const d = await api('/api/login', { email: em, password: pw, remember: $('#rm').checked });
+      user = d.user;
+      remember(em, pw);
+      enter();
+    }
+  } catch (e) { er.textContent = e.message; }
+  g.disabled = false;
+}
+
+async function apiVerify() {
+  try {
+    const d = await api('/api/verify', { email: pend.em, code: $('#cd').value.trim(), remember: $('#rm').checked });
+    user = d.user;
+    remember(pend.em, pend.pw);
+    enter();
+  } catch (e) { $('#er').textContent = e.message; }
+}
+
+function mmss(ms) {
+  const s = Math.floor(Math.max(0, ms || 0) / 1000), f = n => String(n).padStart(2, '0');
+  return (s >= 3600 ? f(Math.floor(s / 3600)) + ':' : '') + f(Math.floor((s % 3600) / 60)) + ':' + f(s % 60);
+}
+
+function loadResult(R) {
+  D = R;
+  FT = R.transcript.map(l => ({
+    time: l.timeStr || mmss(l.start),
+    speaker: l.speaker,
+    name: l.name || l.speaker,
+    text: l.text,
+    start: l.start || 0
+  }));
+  quiz = {};
+  ['Easy', 'Medium', 'Hard'].forEach(k => quiz[k] = (R.quiz[k] || []).map(x => [x.q, x.options, x.answer]));
+  renderFT();
+}
+
+const spk = () => (D.speakers || []).map(x => {
+  const st = speakerStyle(x.id);
+  const ini = initials(x.name || x.id);
+  return `<div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+    <div class="tr-av" style="width:36px;height:36px;font-size:14px;background:${st.bg}">${ini}</div>
+    <div><b>${esc(x.name || x.id)}</b> <span class="tr-id-pill" style="background:${st.badge};color:${st.badgeTx}">${esc(x.id)}</span>
+      <div class="mut">${x.words} words · ${x.share}% of speech</div>
+    </div>
+  </div>`;
+}).join('');
+
+async function apiAnalyze(f) {
+  const pg = $('#pg'), pb = $('#pb'), pt = $('#pt');
+  pg.style.display = 'block';
+  $('#res').style.display = 'none';
+  pb.style.width = '6%';
+  pt.textContent = 'Uploading ' + f.name + '…';
+  const t0 = Date.now();
+  try {
+    const r = await fetch('/api/videos?name=' + encodeURIComponent(f.name), {
+      method: 'PUT',
+      headers: { 'X-Requested-With': 'cm', 'Content-Type': f.type || 'application/octet-stream' },
+      credentials: 'same-origin',
+      body: f
+    });
+    let d = {};
+    try { d = await r.json(); } catch (e) {}
+    if (!r.ok) throw new Error(d.error || 'Upload failed');
+    let prog = 12;
+    for (;;) {
+      await new Promise(z => setTimeout(z, 1500));
+      const s = await api('/api/videos/' + d.id, null, 'GET');
+      if (s.status == 'error') throw new Error(s.error || 'Processing failed');
+      pt.textContent = s.stage || 'Working…';
+      prog = Math.min(prog + 6, 95);
+      pb.style.width = prog + '%';
+      if (s.status == 'done') {
+        vid = d.id;
+        loadResult(s.result);
+        pb.style.width = '100%';
+        pg.style.display = 'none';
+        show(f.name, ((Date.now() - t0) / 1000).toFixed(1));
+        break;
+      }
+    }
+  } catch (e) {
+    pg.style.display = 'none';
+    toast(e.message);
+  }
+  $('#fl').value = '';
+}
+
+async function sendAlert(b) {
+  try {
+    b.disabled = true;
+    await api('/api/videos/' + vid + '/alerts', { index: +b.dataset.i });
+    b.textContent = '✓ Alert emailed to ' + user.email;
+  } catch (e) {
+    b.disabled = false;
+    toast(e.message);
+  }
+}
+
+async function askApi(q) {
+  const m = $('#am');
+  m.innerHTML += `<p><b>You:</b> ${esc(q)}</p>`;
+  $('#aq').value = '';
+  try {
+    const d = await api('/api/videos/' + vid + '/ask', { question: q });
+    m.innerHTML += `<p><b>AI:</b> ${esc(d.answer)}</p>`;
+  } catch (e) {
+    m.innerHTML += `<p><b>AI:</b> ${esc(e.message)}</p>`;
+  }
+  m.scrollTop = 1e5;
+}
+
+fetch('/api/me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : Promise.reject()).then(d => {
+  if (d && 'user' in d) {
+    API = true;
+    if (d.user) { user = d.user; enter(); }
+  }
+}).catch(() => {});
+
+let rec = null, TL = [], es = null, isHost = false, locked = false, ppl = [], mic = true;
+
+async function enterRoom(code) {
+  try {
+    if (!code) { code = (await api('/api/rooms', {})).code; }
+    else { await api('/api/rooms/' + code + '/join', {}); }
+    openRoom(code);
+  } catch (e) { toast(e.message); }
+}
+
+function openRoom(code) {
+  $('#lobby').style.display = 'none';
+  $('#room').style.display = 'block';
+  $('#code').textContent = code;
+  MLINES = [];
+  TL = [];
+  mic = true;
+  renderMeetingTranscript();
+  $('#tnote').innerHTML = 'Live transcription formatted as <b>(Time , ID , Transcript)</b>. Each person has a distinct color badge.';
+  es = new EventSource('/api/rooms/' + code + '/events');
+  es.addEventListener('init', e => {
+    const d = JSON.parse(e.data);
+    isHost = d.host;
+    locked = d.locked;
+    ppl = d.people;
+    (d.lines || []).forEach(addLine);
+    ctl(code);
+    rt();
+  });
+  es.addEventListener('people', e => { ppl = JSON.parse(e.data); rt(); });
+  es.addEventListener('line', e => addLine(JSON.parse(e.data)));
+  es.addEventListener('lock', e => { locked = JSON.parse(e.data).locked; ctl(code); toast(locked ? 'Room locked: nobody new can join' : 'Room unlocked'); });
+  es.addEventListener('ended', () => { closeRoom(); toast('The host ended the meeting'); });
+  es.addEventListener('removed', () => { closeRoom(); toast('You were removed by the host'); });
+  es.onerror = () => { if (es && es.readyState == 2) { closeRoom(); toast('Could not stay connected to the meeting'); } };
+  startMic(code);
+}
+
+function addLine(l) {
+  const d = new Date(l.ts || Date.now());
+  const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  TL.push(`[${t}] ${l.name} (${l.id}): ${l.text}`);
+  MLINES.push({ id: l.id, name: l.name, text: l.text, ts: l.ts, time: t });
+  renderMeetingTranscript();
+  const tile = [...$$('.tile')].find(x => x.dataset.n == l.id);
+  if (tile) { tile.classList.add('sp'); setTimeout(() => tile.classList.remove('sp'), 2000); }
+}
+
+function rt() {
+  $('#cnt').textContent = ppl.length;
+  $('#tiles').innerHTML = ppl.map(x => {
+    const st = speakerStyle(x.id);
+    return `<div class="tile glass" data-n="${esc(x.id)}" style="position:relative">
+      <div class="av" style="background:${st.bg}">${esc(x.name[0] || '?')}</div>
+      ${esc(x.name)}${x.hand ? ' ✋' : ''}
+      <div class="tr-id-pill" style="font-size:11px;background:${st.badge};color:${st.badgeTx};margin-top:4px">${esc(x.id)}</div>
+      ${isHost && x.id !== user.id ? `<button class="nav" data-rm="${esc(x.id)}" title="Remove from meeting" style="position:absolute;top:6px;right:6px;padding:4px 8px">✕</button>` : ''}
+    </div>`;
+  }).join('');
+  $$('[data-rm]').forEach(b => b.onclick = () => api('/api/rooms/' + $('#code').textContent + '/remove', { id: b.dataset.rm }).catch(e => toast(e.message)));
+}
+
+function ctl(code) {
+  $('#ctl').innerHTML = (isHost ? `<button class="btn g" id="k1">${locked ? '🔓 Unlock room' : '🔒 Lock room'}</button>` : `<button class="btn g" id="k4">✋ Raise hand</button>`) +
+    `<button class="btn g" id="k5">🎤 Mic: ${mic ? 'on' : 'off'}</button><button class="btn g" id="k2">📋 Copy transcript</button><button class="btn r" id="k3">${isHost ? 'End for all' : 'Leave'}</button>`;
+  $('#k2').onclick = () => cp(MLINES.map(l => `[${l.time}] [${l.id}] ${l.name}: ${l.text}`).join('\n'), 'Transcript copied');
+  $('#k5').onclick = e => {
+    mic = !mic;
+    e.target.textContent = '🎤 Mic: ' + (mic ? 'on' : 'off');
+    if (rec) { try { mic ? rec.start() : rec.stop(); } catch (x) {} }
+  };
+  if (isHost) {
+    $('#k1').onclick = () => api('/api/rooms/' + code + '/lock', { locked: !locked }).catch(e => toast(e.message));
+    $('#k3').onclick = () => api('/api/rooms/' + code + '/end', {}).catch(e => toast(e.message));
+  } else {
+    let up = false;
+    $('#k4').onclick = e => { up = !up; api('/api/rooms/' + code + '/hand', { up }).catch(() => {}); e.target.textContent = up ? '✋ Lower hand' : '✋ Raise hand'; };
+    $('#k3').onclick = closeRoom;
+  }
+}
+
+function startMic(code) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Live speech needs Chrome or Edge. You can still read the transcript.'); return; }
+  rec = new SR(); rec.continuous = true; rec.interimResults = false; rec.lang = 'en-IN';
+  rec.onresult = e => {
+    if (!mic) return;
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        const tx = e.results[i][0].transcript.trim();
+        if (tx) sendLine(code, tx);
+      }
+    }
+  };
+  rec.onend = () => { if (rec && mic) try { rec.start(); } catch (e) {} };
+  rec.onerror = e => { if (e.error == 'not-allowed') toast('Allow microphone access to be transcribed'); };
+  try { rec.start(); } catch (e) {}
+}
+
+function sendLine(code, text) { return api('/api/rooms/' + code + '/line', { text }).catch(() => {}); }
+function closeRoom() { if (es) { es.close(); es = null; } lobby(); }
+const esc = t => String(t || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+let qOk = 0, qTot = 0, pend = null, vcode = '';
+const DISP = ['mailinator.com', 'tempmail.com', '10minutemail.com', 'guerrillamail.com', 'yopmail.com', 'trashmail.com'];
+function chk(em) {
+  const m = /^[^\s@]+@([^\s@]+\.[a-z]{2,})$/i.exec(em);
+  if (!m) return { ok: 0, msg: 'Enter a valid email.' };
+  const d = m[1].toLowerCase();
+  if (DISP.includes(d)) return { ok: 0, msg: 'Temporary email domains are not allowed.' };
+  return { ok: 1, col: /\.(edu|ac)(\.[a-z]{2})?$/.test(d) };
+}
+$('#em').oninput = () => {
+  const v = $('#em').value.trim(), r = chk(v);
+  $('#eh').textContent = !v ? '' : !r.ok ? '⚠ ' + r.msg : r.col ? '🎓 College email detected' : '✓ Format OK – a code will confirm it exists';
+};
+
+$('#vb').onclick = () => {
+  if (API) return apiVerify();
+  if ($('#cd').value.trim() !== vcode) return $('#er').textContent = 'Incorrect code. Check your inbox and try again.';
+  const u = store.get('cm_users') || {};
+  u[pend.em] = { name: pend.nm, pw: btoa(pend.pw), role: pend.role, verified: true, id: 'CM-' + (1000 + Math.floor(Math.random() * 9000)) };
+  store.set('cm_users', u);
+  user = { email: pend.em, ...u[pend.em] };
+  remember(pend.em, pend.pw);
+  enter();
+};
+
+function go(v) {
+  $$('.nav').forEach(x => x.classList.toggle('on', x.dataset.v == v));
+  ['v0', 'v1', 'v2', 'v3', 'v4'].forEach(k => $('#' + k).style.display = k == v ? '' : 'none');
+  $('#ask').style.display = v == 'v1' && $('#res').style.display == 'block' ? 'block' : 'none';
+  $('#ap').style.display = 'none';
+  reveal();
+  scrollTo({ top: 0, behavior: 'smooth' });
+}
+$$('.nav').forEach(b => b.onclick = () => go(b.dataset.v));
+$$('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); const t = e.target; setTimeout(() => t.style.transitionDelay = '0ms', 900); }
+}), { threshold: .06 }) : null;
+
+function reveal() {
+  $$('.card:not(.in)').forEach((c, i) => {
+    c.classList.add('rv');
+    c.style.transitionDelay = Math.min(i % 6, 5) * 80 + 'ms';
+    io ? io.observe(c) : c.classList.add('in');
+  });
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('.btn');
+  if (!b) return;
+  const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height), s = document.createElement('span');
+  s.className = 'rip';
+  s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+  b.appendChild(s);
+  setTimeout(() => s.remove(), 600);
+});
+
+function cp(t, m) {
+  try {
+    navigator.clipboard.writeText(t).then(() => toast(m), () => toast('Copy blocked by browser'));
+  } catch (e) { toast('Copy blocked by browser'); }
+}
+
+function extras() {
+  $('#ins').innerHTML = (D ? D.insights : [
+    'Multi-level indentation in Markdown cells creates intuitive semantic hierarchy for technical notes.',
+    'Descriptive alt text in image Markdown prevents broken-link ambiguity and enhances document accessibility.',
+    'Using Markdown cells for documentation directly alongside Python code cells improves reproducibility in Jupyter Notebooks.'
+  ]).map(x => `<li>${esc(x)}</li>`).join('');
+  const fc = D ? D.flashcards.map(f => [f.q, f.a]) : [
+    ['What is the key difference between ordered and unordered lists in Markdown?', 'Ordered lists use sequential numbers (1, 2, 3), while unordered lists use bullets (filled circles, squares, empty circles).'],
+    ['What is the exact syntax for a Markdown hyperlink?', '[Link text](https://destination-url.com)'],
+    ['What is the exact syntax for embedding an image in Markdown?', '![Alt text description](https://image-url.com/pic.png)'],
+    ['What is displayed if an embedded image URL cannot be loaded?', 'The descriptive alt text inside the square brackets is shown as a fallback.']
+  ];
+  $('#fcs').innerHTML = fc.map(c => `<div class="fl"><div class="fc"><div>${esc(c[0])}</div><div>${esc(c[1])}</div></div></div>`).join('');
+  $$('.fc').forEach(c => c.onclick = () => c.classList.toggle('on'));
+  $('#cs').onclick = () => cp($('#sm').textContent + '\n\n' + FT.map(l => `[${l.time}] [${l.speaker}] ${l.name}: ${l.text}`).join('\n'), 'Summary and full transcript copied');
+  $('#ca').onclick = () => {
+    if (D) {
+      api('/api/videos/' + vid + '/alerts', {}).then(r => {
+        $$('#tk button').forEach(b => b.textContent = '✓ Alert emailed');
+        toast(r.sent + ' task alert(s) emailed to ' + user.email);
+      }).catch(e => toast(e.message));
+      return;
+    }
+    $$('#tk button').forEach(b => b.click());
+    toast('Demo: 3 task alerts queued for ' + user.email);
+  };
+  $('#ask').style.display = 'block';
+  reveal();
+}
+
+$('#ask').onclick = () => { const p = $('#ap'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; };
+function ans() {
+  const q = $('#aq').value.trim();
+  if (!q) return;
+  if (D) return askApi(q);
+  const w = q.toLowerCase().match(/[a-z0-9]{3,}/g) || [];
+  let best = null, bs = 0;
+  FT.forEach(l => {
+    const n = w.filter(x => l.text.toLowerCase().includes(x)).length;
+    if (n > bs) { bs = n; best = l; }
+  });
+  const m = $('#am');
+  m.innerHTML += `<p><b>You:</b> ${esc(q)}</p><p><b>AI:</b> ${best ? `${esc(best.name || best.speaker)} at [${esc(best.time)}] said: ${esc(best.text)}` : 'I could not find that in this video.'}</p>`;
+  m.scrollTop = 1e5;
+  $('#aq').value = '';
+}
+$('#as').onclick = ans;
+$('#aq').onkeydown = e => { if (e.key === 'Enter') ans(); };
 </script></body></html>

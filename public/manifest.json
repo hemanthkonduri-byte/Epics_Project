@@ -1,0 +1,16 @@
+{
+  "name": "ClassMind – Meeting & Video Transcripts",
+  "short_name": "ClassMind",
+  "description": "Multi-person meeting & video transcripts with AI summaries, quizzes and speaker differentiation",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070816",
+  "theme_color": "#2f4468",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232f4468'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>CM</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
