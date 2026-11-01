@@ -1,6 +1,10 @@
-
 {
   "appId": "com.hemanth.aiknowledgesystem",
   "appName": "AI Knowledge System",
-  "webDir": "public"
+  "webDir": "public",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  }
 }

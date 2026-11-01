@@ -75,7 +75,12 @@ function setSession(res, user, remember) {
 }
 const clearSession = (res) => res.setHeader('Set-Cookie', 'cm=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');
 function currentUser(req) {
-  const p = readToken(cookies(req).cm);
+  let token = cookies(req).cm;
+  const authHdr = req.headers.authorization;
+  if (!token && authHdr && authHdr.startsWith('Bearer ')) {
+    token = authHdr.slice(7).trim();
+  }
+  const p = readToken(token);
   return p ? db.prepare('SELECT * FROM users WHERE id=? AND verified=1').get(p.id) || null : null;
 }
 const needUser = (req) => currentUser(req) || (() => { throw httpErr(401, 'Please log in.'); })();
@@ -259,7 +264,7 @@ async function api(req, res, url) {
     db.prepare('DELETE FROM codes WHERE email=?').run(email);
     const u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
     setSession(res, u, b.remember !== false);
-    return send(res, 200, { user: pub(u) });
+    return send(res, 200, { user: pub(u), token: makeToken({ id: u.id, exp: Date.now() + 30 * 864e5 }) });
   }
 
   if (m === 'POST' && p === '/api/login') {
@@ -270,7 +275,7 @@ async function api(req, res, url) {
     if (!u || !(await checkPw(String(b.password || ''), u.pw))) throw httpErr(401, 'Wrong email or password.');
     if (!u.verified) throw httpErr(403, 'Email not verified. Sign up again to get a new code.');
     setSession(res, u, b.remember !== false);
-    return send(res, 200, { user: pub(u) });
+    return send(res, 200, { user: pub(u), token: makeToken({ id: u.id, exp: Date.now() + 30 * 864e5 }) });
   }
 
   if (m === 'POST' && p === '/api/logout') { clearSession(res); return send(res, 200, { ok: true }); }

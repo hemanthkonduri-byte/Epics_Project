@@ -95,8 +95,11 @@ details{padding:12px 0;border-bottom:1px solid var(--bd)}summary{cursor:pointer}
 <label class="mut" style="display:flex;gap:8px;align-items:center;margin:2px 0"><input type="checkbox" id="rm" checked style="width:auto;margin:0"> Remember me on this device</label>
 <p id="er" class="mut" style="color:var(--bad);min-height:18px"></p>
 <button class="btn" id="go" style="width:100%">Create account</button>
-<div id="ms" class="mut" style="margin-top:10px;font-size:13px;min-height:18px"></div>
-<details style="margin-top:8px;font-size:12px;border:none"><summary class="mut" style="cursor:pointer">⚙ Mobile Server Connection</summary><div style="display:flex;gap:6px;margin-top:6px"><input id="authServerUrl" placeholder="https://your-server.com or http://192.168.x.x:3000" style="flex:1;font-size:12px;padding:8px;margin:0"><button type="button" class="btn g" id="authSaveServer" style="padding:6px 10px;font-size:12px">Save</button></div></details>
+<div class="card glass" style="margin-top:10px;padding:10px 12px;font-size:12px;border-radius:12px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>📡 Mobile Server Link</b><span id="authServerBadge" class="pill" style="font-size:11px">Checking…</span></div>
+<div style="display:flex;gap:6px"><input id="authServerUrl" placeholder="http://192.168.0.3:3000" style="flex:1;font-size:12px;padding:8px;margin:0"><button type="button" class="btn g" id="authSaveServer" style="padding:6px 10px;font-size:12px">Save</button><button type="button" class="btn" id="authTestServer" style="padding:6px 10px;font-size:12px">Test</button></div>
+<div id="authServerMsg" class="mut" style="font-size:11px;margin-top:4px">Connecting to your computer at http://192.168.0.3:3000</div>
+</div>
 <div id="vf" style="display:none"><p class="mut">We sent a 6-digit code to <b id="ve"></b>. Enter it to confirm this email is real.</p><div id="dc" style="display:none;margin:8px 0;padding:10px 12px;border-radius:12px;border:1px dashed var(--ac);font-weight:700"></div><input id="cd" inputmode="numeric" maxlength="6" placeholder="6-digit code"><button class="btn" id="vb" style="width:100%">Verify & continue</button></div>
 </div></div></div>
 
@@ -226,31 +229,72 @@ function initServerConfig(){
   if($('#serverUrlInput')) $('#serverUrlInput').value = cur;
   if($('#authServerUrl')) $('#authServerUrl').value = cur;
   if($('#serverUrlStatus')) $('#serverUrlStatus').textContent = 'Connected server: ' + (API_BASE || 'Local (this device)');
+  const testConn = async () => {
+    const badge = $('#authServerBadge');
+    const msg = $('#authServerMsg');
+    if (badge) { badge.textContent = 'Testing…'; badge.style.color = ''; }
+    try {
+      const tok = store.get('cm_token');
+      const hdrs = tok ? { 'Authorization': 'Bearer ' + tok } : {};
+      const r = await fetch(`${API_BASE}/api/me`, { credentials: 'include', headers: hdrs });
+      if (r.ok) {
+        if (badge) { badge.textContent = 'Online ✅'; badge.style.color = 'var(--good)'; }
+        if (msg) msg.textContent = 'Connected to computer: ' + (API_BASE || 'local');
+      } else {
+        if (badge) { badge.textContent = 'Server reachable (' + r.status + ')'; badge.style.color = 'var(--good)'; }
+      }
+    } catch (e) {
+      if (badge) { badge.textContent = 'Offline ❌'; badge.style.color = 'var(--bad)'; }
+      if (msg) msg.textContent = 'Cannot reach ' + (API_BASE || 'server') + '. Check Wi-Fi connection.';
+    }
+  };
   const updateServer = (val) => {
     let clean = (val || '').trim().replace(/\/+$/, '');
-    if(clean && !clean.startsWith('http://') && !clean.startsWith('https://')) clean = 'https://' + clean;
+    if(clean && !clean.startsWith('http://') && !clean.startsWith('https://')) clean = 'http://' + clean;
     store.set('cm_server_url', clean);
-    API_BASE = clean || ((window.location && window.location.protocol.startsWith('http')) ? '' : 'http://localhost:3000');
+    API_BASE = clean || (isNative ? 'http://192.168.0.3:3000' : ((window.location && window.location.protocol.startsWith('http')) ? '' : 'http://192.168.0.3:3000'));
     toast(clean ? 'Server URL saved: ' + clean : 'Reset to default');
     if($('#serverUrlStatus')) $('#serverUrlStatus').textContent = 'Connected server: ' + (API_BASE || 'Local');
+    testConn();
   };
   $('#saveServerBtn')?.addEventListener('click', () => updateServer($('#serverUrlInput').value));
   $('#authSaveServer')?.addEventListener('click', () => updateServer($('#authServerUrl').value));
+  $('#authTestServer')?.addEventListener('click', () => { updateServer($('#authServerUrl').value); testConn(); });
+  testConn();
+
+  // Password visibility toggle (eye button)
+  const pe = $('#pe'), pw = $('#pw');
+  if (pe && pw) {
+    pe.onclick = (e) => {
+      e.preventDefault();
+      const isPw = pw.type === 'password';
+      pw.type = isPw ? 'text' : 'password';
+      pe.textContent = isPw ? '🙈' : '👁';
+      pe.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+    };
+  }
 }
 setTimeout(initServerConfig, 100);
 
 async function api(path, body, method) {
+  const token = (typeof store !== 'undefined' && store.get('cm_token')) || '';
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'cm'
+  };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
 
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: method || 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With': 'cm'
-    },
-    credentials: 'include',
-    body: body ? JSON.stringify(body) : undefined
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method: method || 'POST',
+      headers,
+      credentials: 'include',
+      body: body ? JSON.stringify(body) : undefined
+    });
+  } catch (netErr) {
+    throw new Error(`Could not connect to server at ${API_BASE || 'this device'}. Make sure your phone is on the same Wi-Fi as your PC and the server is running.`);
+  }
 
   let data = {};
   try {
@@ -261,6 +305,10 @@ async function api(path, body, method) {
 
   if (!response.ok) {
     throw new Error(data.error || `Request failed (${response.status})`);
+  }
+
+  if (data && data.token) {
+    store.set('cm_token', data.token);
   }
 
   return data;
@@ -277,7 +325,8 @@ let prog=12;for(;;){await new Promise(z=>setTimeout(z,1500));const s=await api('
 catch(e){pg.style.display='none';toast(e.message)}$('#fl').value=''}
 async function sendAlert(b){try{b.disabled=true;await api('/api/videos/'+vid+'/alerts',{index:+b.dataset.i});b.textContent='✓ Alert emailed to '+user.email}catch(e){b.disabled=false;toast(e.message)}}
 async function askApi(q){const m=$('#videoAskMessages');const add=(who,txt)=>{const row=document.createElement('p');row.style.cssText='padding:10px 12px;border-radius:10px;background:var(--bd);white-space:pre-wrap';const b=document.createElement('b');b.textContent=who+': ';row.append(b,document.createTextNode(txt));m.appendChild(row);m.scrollTop=m.scrollHeight};add('You',q);$('#videoAskInput').value='';$('#videoAskSend').disabled=true;$('#videoAskStatus').textContent='Searching the analyzed transcript…';try{const d=await api('/api/videos/'+vid+'/ask',{question:q});add('Ask AI',d.answer);$('#videoAskStatus').textContent='Answer based on this transcript.'}catch(e){add('Ask AI',e.message);$('#videoAskStatus').textContent='Could not answer.'}finally{$('#videoAskSend').disabled=false;$('#videoAskInput').focus()}}
-fetch(`${API_BASE}/api/me`,{credentials:'include'}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d&&'user' in d){API=true;$('#ms').innerHTML=d.mail?'✅ Real email is ON. Codes and alerts are sent to your inbox.':'⚠ Real email is OFF (test mode). Close this window and double-click <b>SETUP-AND-START.bat</b>.';if(d.user){user=d.user;enter()}}}).catch(()=>{});
+const initTok = (typeof store !== 'undefined' && store.get('cm_token')) || '';
+fetch(`${API_BASE}/api/me`,{credentials:'include', headers: (initTok ? {'Authorization': 'Bearer ' + initTok} : {})}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d&&'user' in d){API=true;$('#ms').innerHTML=d.mail?'✅ Real email is ON. Codes and alerts are sent to your inbox.':'⚠ Real email is OFF (test mode). Close this window and double-click <b>SETUP-AND-START.bat</b>.';if(d.user){user=d.user;enter()}}}).catch(()=>{});
 let rec=null,TL=[],es=null,isHost=false,locked=false,ppl=[],mic=false;
 let cameraOn=false,localStream=null,shareStream=null,handUp=false;
 const peerConnections=new Map(), remoteStreams=new Map();
