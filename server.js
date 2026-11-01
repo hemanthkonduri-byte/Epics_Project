@@ -576,8 +576,13 @@ function serveStatic(req, res, url) {
   if (!file.startsWith(PUB + path.sep)) throw httpErr(404, 'Not found.');
   let st;
   try { st = fs.statSync(file); } catch { throw httpErr(404, 'Not found.'); }
-  if (!st.isFile()) throw httpErr(404, 'Not found.');
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Content-Length': st.size, 'Cache-Control': 'no-cache' });
+  res.writeHead(200, {
+    'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
+    'Content-Length': st.size,
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
   if (req.method === 'HEAD') return res.end();
   fs.createReadStream(file).pipe(res);
 }

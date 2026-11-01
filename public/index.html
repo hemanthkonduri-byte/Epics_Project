@@ -218,11 +218,11 @@ sg.querySelectorAll('[data-f]').forEach(b=>b.onmousedown=e=>{e.preventDefault();
 $('#em').addEventListener('input',sugg);$('#em').addEventListener('focus',sugg);$('#em').addEventListener('blur',()=>setTimeout(()=>$('#sg').style.display='none',150));
 const isNative = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || (window.location.hostname === 'localhost' && !window.location.port));
 const savedServer = (typeof store !== 'undefined' && store.get('cm_server_url')) || '';
-let API_BASE = savedServer ? savedServer.replace(/\/+$/, '') : (isNative ? 'http://10.0.2.2:3000' : ((window.location && window.location.protocol.startsWith('http')) ? '' : 'http://localhost:3000'));
+let API_BASE = savedServer ? savedServer.replace(/\/+$/, '') : (isNative ? 'http://192.168.0.3:3000' : ((window.location && window.location.protocol.startsWith('http')) ? '' : 'http://192.168.0.3:3000'));
 let API=true,D=null,vid=null;
 
 function initServerConfig(){
-  const cur = store.get('cm_server_url') || (isNative ? 'http://10.0.2.2:3000' : '');
+  const cur = store.get('cm_server_url') || (isNative ? 'http://192.168.0.3:3000' : '');
   if($('#serverUrlInput')) $('#serverUrlInput').value = cur;
   if($('#authServerUrl')) $('#authServerUrl').value = cur;
   if($('#serverUrlStatus')) $('#serverUrlStatus').textContent = 'Connected server: ' + (API_BASE || 'Local (this device)');
