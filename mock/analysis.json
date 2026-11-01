@@ -1,203 +1,186 @@
 {
- "summary": "Interactive class session hosted by Prof. Sharma (SPK-01) with active participation from Rahul Verma (SPK-02), Ananya Patel (SPK-03), and David Chen (SPK-04). The instructor demonstrated formatting in Jupyter Notebook Markdown cells, contrasting ordered lists (numeric) with unordered lists (symbols: filled circle, square, open circle). He explained hyperlink syntax [text](url) and image embedding ![alt](url) with alt text fallback. The session concluded with practical student questions on multimedia support and a homework assignment deadline.",
+ "summary": "Demo summary. The instructor explains ordered and unordered lists in Jupyter Notebook Markdown cells, then shows how to insert hyperlinks and images, and asks learners to practise.",
  "keyPoints": [
-  "[00:00] Prof. Sharma opens the session on Markdown formatting in Jupyter Notebooks.",
-  "[00:12] Ordered lists use sequential numbers, whereas unordered lists use tiered geometric bullets.",
-  "[00:36] Sub-point indentation dynamically alters bullets from filled circles to squares and empty circles.",
-  "[01:05] Hyperlink notation: bracketed label [Link text] followed immediately by URL in parentheses (url).",
-  "[01:54] Image notation: prefixed with an exclamation mark ![alt text](image url); displays fallback alt text if link fails.",
-  "[02:39] Multimedia (audio/video) can also be incorporated into notebook Markdown cells.",
-  "[03:02] Prof. Sharma assigns homework: create a formatted Markdown practice document due Friday at 5 PM."
+  "Ordered lists use numbering; unordered lists use different symbols (filled circles, filled squares, empty circles) to separate main points from sub-points.",
+  "Hyperlinks: display text in square brackets, then the URL in parentheses.",
+  "Images use the hyperlink syntax preceded by an exclamation mark (!); the bracket text is shown if the image fails to load.",
+  "The same notation can also insert audio, video and other media."
  ],
  "insights": [
-  "Multi-level indentation in Markdown cells creates intuitive semantic hierarchy for technical notes.",
-  "Descriptive alt text in image Markdown prevents broken-link ambiguity and enhances document accessibility.",
-  "Using Markdown cells for documentation directly alongside Python code cells improves reproducibility in Jupyter Notebooks."
+  "Markdown cells in Jupyter Notebooks let you present information clearly with formatted lists, hyperlinks and embedded media.",
+  "Descriptive text inside the brackets of an image ensures alternative text is shown if the image URL is broken or unavailable."
  ],
  "tasks": [
   {
-   "task": "Create a Markdown practice document containing ordered lists, unordered lists, a hyperlink, and an image",
-   "owner": "Everyone (Students)",
-   "due": "Friday 5 PM"
-  },
-  {
-   "task": "Review Markdown image fallback alt text notation and test with broken image URL",
-   "owner": "Rahul & David",
-   "due": "Before next session"
-  },
-  {
-   "task": "Attend the next Jupyter session",
+   "task": "Try inserting a hyperlink and an image in a Markdown cell",
    "owner": "Everyone",
-   "due": "Tomorrow at 10 AM"
+   "due": "the next session"
+  },
+  {
+   "task": "Attend the next session",
+   "owner": "Everyone",
+   "due": "tomorrow"
   }
  ],
  "quiz": {
   "Easy": [
    {
-    "q": "What do ordered lists use to sequence points?",
+    "q": "What do ordered lists use to mark points?",
     "options": [
-     "Sequential numbering (1, 2, 3)",
-     "Geometric symbols only",
-     "Random colored bullets"
+     "Symbols",
+     "Numbering",
+     "Colours"
     ],
-    "answer": 0
+    "answer": 1
    },
    {
-    "q": "Which symbol is used for the top-level main point in an unordered list?",
+    "q": "Which list type uses symbols such as filled circles to mark points?",
     "options": [
-     "A filled circle",
-     "A triangle",
-     "A numbered bracket"
+     "Ordered list",
+     "Unordered list",
+     "Table"
     ],
-    "answer": 0
+    "answer": 1
    },
    {
-    "q": "Which tool was used by Prof. Sharma to demonstrate Markdown cells?",
+    "q": "Which tool is used in the session for Markdown cells?",
     "options": [
      "Jupyter Notebook",
-     "Microsoft Word",
-     "Adobe Acrobat"
+     "Excel",
+     "Photoshop"
     ],
     "answer": 0
    },
    {
-    "q": "What character is placed at the very start to embed an image in Markdown?",
+    "q": "Besides plain text, what can be inserted in Markdown?",
     "options": [
-     "Exclamation mark (!)",
-     "Ampersand (&)",
-     "Dollar sign ($)"
+     "Nothing",
+     "Only numbers",
+     "Links and images"
     ],
-    "answer": 0
+    "answer": 2
    },
    {
-    "q": "Where does the URL go when writing a Markdown hyperlink?",
+    "q": "Which type of notebook cell is used to write formatted text?",
     "options": [
-     "Inside parentheses ( )",
-     "Inside curly braces { }",
-     "Inside quotation marks \" \""
+     "Code cell",
+     "Markdown cell",
+     "Output cell"
     ],
-    "answer": 0
+    "answer": 1
    }
   ],
   "Medium": [
    {
-    "q": "How does the Markdown renderer visually differentiate main points from nested sub-points?",
+    "q": "How are main points and sub-points told apart in an unordered list?",
     "options": [
-     "By alternating symbols: filled circle for main, square for sub-1, empty circle for sub-2",
-     "By only changing the font color to blue",
-     "It does not differentiate them at all"
+     "By different symbols",
+     "By numbers only",
+     "They are not told apart"
     ],
     "answer": 0
    },
    {
-    "q": "Where does the clickable display text go in a Markdown hyperlink?",
+    "q": "Where does the display text of a hyperlink go?",
     "options": [
-     "Inside square brackets [ ]",
-     "Inside round parentheses ( )",
-     "Inside angle brackets < >"
+     "Inside square brackets",
+     "Inside curly braces",
+     "After a hash"
     ],
     "answer": 0
    },
    {
-    "q": "What gets displayed if an image address is broken or unreachable in Markdown?",
+    "q": "Where is the URL placed in a Markdown hyperlink?",
     "options": [
-     "The alt text written inside the square brackets",
-     "A blank white error page",
-     "The entire notebook file is corrupted"
+     "Before the square brackets",
+     "Inside parentheses after the brackets",
+     "At the end of the cell"
     ],
-    "answer": 0
+    "answer": 1
    },
    {
-    "q": "Can audio and video multimedia also be incorporated into Markdown cells?",
+    "q": "Which character is added before hyperlink syntax to embed an image?",
     "options": [
-     "Yes, using compatible Markdown or HTML embedding tags",
-     "No, Markdown only supports plain unformatted text",
-     "Only if written in binary C++ code"
+     "An asterisk (*)",
+     "An ampersand (&)",
+     "An exclamation mark (!)"
     ],
-    "answer": 0
+    "answer": 2
    },
    {
-    "q": "What visual indication shows that a hyperlink was rendered successfully in Markdown?",
+    "q": "What is shown if the image URL is unavailable?",
     "options": [
-     "The text is highlighted in blue and underlined",
-     "The text turns bright red and italicized",
-     "The cell is replaced with a popup modal"
+     "The cell is deleted",
+     "The notebook crashes",
+     "The text inside the square brackets"
     ],
-    "answer": 0
+    "answer": 2
    }
   ],
   "Hard": [
    {
-    "q": "Why is descriptive alt text inside the square brackets critical when embedding an image?",
+    "q": "Why is descriptive text inside the image brackets useful?",
     "options": [
-     "It provides meaningful fallback text if the remote image fails to load and aids screen readers",
-     "It encrypts the remote image with an SSL certificate",
-     "It determines the height and width in pixels automatically"
+     "It sets the image size",
+     "It is shown as alternative text if the image fails to load",
+     "It encrypts the link"
     ],
-    "answer": 0
+    "answer": 1
    },
    {
-    "q": "According to the session dialogue, what is the deadline for the practice assignment?",
+    "q": "How can audio and video be inserted in Markdown?",
     "options": [
-     "Friday at 5 PM",
-     "Next month",
-     "End of the semester"
+     "Code cells only",
+     "A separate plugin",
+     "Using the same notation as images"
     ],
-    "answer": 0
+    "answer": 2
    },
    {
-    "q": "In the demonstration, what symbol marks sub-level 1 in an unordered list?",
+    "q": "In the demonstrated unordered list, what marks the main point?",
     "options": [
-     "A filled square",
      "A filled circle",
-     "An asterisk (*)"
+     "A filled square",
+     "An empty circle"
     ],
     "answer": 0
    },
    {
-    "q": "What decides whether you should use ordered or unordered lists in your documentation?",
+    "q": "According to the instructor, what decides how information is represented?",
     "options": [
-     "The context of your data: sequential steps need ordered lists, arbitrary items use unordered",
-     "Only the Python version number",
-     "Ordered lists are required for all Markdown cells"
+     "The notebook version",
+     "It is up to you",
+     "The file size"
     ],
-    "answer": 0
+    "answer": 1
    },
    {
-    "q": "How does pairing Markdown explanation cells with code cells benefit data science workflows?",
+    "q": "Which set did the instructor recap as necessary to know?",
     "options": [
-     "It creates clear narrative documentation alongside executable code for better understanding",
-     "It slows down Python execution speed",
-     "It converts code into binary machine code"
+     "Only headings",
+     "Only code cells",
+     "Headings, normal text, ordered and unordered lists, hyperlinks and images"
     ],
-    "answer": 0
+    "answer": 2
    }
   ]
  },
  "flashcards": [
   {
-   "q": "What is the key difference between ordered and unordered lists in Markdown?",
-   "a": "Ordered lists use sequential numbers (1, 2, 3), while unordered lists use bullets (filled circles, squares, empty circles)."
+   "q": "How do ordered and unordered lists differ in Markdown?",
+   "a": "Ordered lists use numbering; unordered lists use symbols to separate main points and sub-points."
   },
   {
-   "q": "What is the exact syntax for a Markdown hyperlink?",
-   "a": "[Link text](https://destination-url.com)"
+   "q": "What is the Markdown syntax for a hyperlink?",
+   "a": "Display text in square brackets followed by the URL in parentheses."
   },
   {
-   "q": "What is the exact syntax for embedding an image in Markdown?",
-   "a": "![Alt text description](https://image-url.com/pic.png)"
+   "q": "Which character starts the syntax to embed an image?",
+   "a": "An exclamation mark (!)."
   },
   {
-   "q": "What is displayed if an embedded image URL cannot be loaded?",
-   "a": "The descriptive alt text inside the square brackets is shown as a fallback."
-  },
-  {
-   "q": "What symbol is rendered for sub-point level 1 when indented under an unordered list?",
-   "a": "A filled square."
-  },
-  {
-   "q": "What task was assigned by Prof. Sharma at the end of the meeting?",
-   "a": "Create a Markdown practice document with ordered & unordered lists, a hyperlink, and an image, due Friday at 5 PM."
+   "q": "What happens if the image URL is unavailable?",
+   "a": "The text inside the square brackets is displayed."
   }
  ]
 }

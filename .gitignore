@@ -1,3 +1,9 @@
 .env
 data/
 node_modules/
+*.backup*
+*-backup*
+services_files/
+services_html_backup.txt.js
+server-broken-backup.js
+epics/

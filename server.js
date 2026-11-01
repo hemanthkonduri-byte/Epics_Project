@@ -17,7 +17,7 @@ try {
 } catch { /* no .env file */ }
 if (process.argv.includes('--demo')) process.env.MOCK = '1';
 const E = process.env;
-const { sendMail, mailConfigured, processVideo, ask, ts } = require('./services');
+const { sendMail, mailConfigured, processVideo, ask, askora, ts } = require('./services');
 
 const PORT = +E.PORT || 3000;
 if (!E.SESSION_SECRET) console.warn('WARNING: SESSION_SECRET is not set. Logins will reset on every restart. See .env.example');
@@ -25,7 +25,9 @@ const SECRET = E.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const PUB = path.join(__dirname, 'public');
 const DATA = path.join(__dirname, 'data');
 const UP = path.join(DATA, 'uploads');
+const BACKUPS = path.join(DATA, 'backups');
 fs.mkdirSync(UP, { recursive: true });
+fs.mkdirSync(BACKUPS, { recursive: true });
 
 /* ---------- database ---------- */
 const db = new DatabaseSync(path.join(DATA, 'app.db'));
@@ -36,6 +38,9 @@ CREATE TABLE IF NOT EXISTS videos(id TEXT PRIMARY KEY, user_id INTEGER NOT NULL,
 CREATE TABLE IF NOT EXISTS meetings(code TEXT PRIMARY KEY, host_id INTEGER NOT NULL, locked INTEGER NOT NULL DEFAULT 0, ended INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS mlines(id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, uid TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, ts INTEGER NOT NULL);`);
 db.prepare("UPDATE videos SET status='error', error='The server restarted. Please upload again.' WHERE status IN ('queued','working')").run();
+// Upgrade existing databases safely: each saved class can have a user-friendly title.
+if (!db.prepare('PRAGMA table_info(videos)').all().some((c) => c.name === 'title')) db.exec('ALTER TABLE videos ADD COLUMN title TEXT');
+db.exec("UPDATE videos SET title=filename WHERE title IS NULL OR title=''");
 
 /* ---------- helpers ---------- */
 const scrypt = promisify(crypto.scrypt);
@@ -117,8 +122,8 @@ const clientIp = (req) => (E.TRUST_PROXY === '1' && String(req.headers['x-forwar
 async function issueCode(email) {
   const code = String(crypto.randomInt(100000, 1000000));
   db.prepare('INSERT OR REPLACE INTO codes(email,hash,expires,tries) VALUES(?,?,?,0)').run(email, sha(code + ':' + email), Date.now() + 10 * 60000);
-  try { await sendMail(email, 'Your ClassMind verification code', `Your ClassMind code is ${code}.\nIt expires in 10 minutes. If you did not sign up, ignore this email.`); }
-  catch (e) { console.error('mail error:', e.message); throw httpErr(502, 'Could not send the email. Check the address and try again.'); }
+  try { await sendMail(email, 'Your AI Knowledge System verification code', `Your AI Knowledge System code is ${code}.\nIt expires in 10 minutes. If you did not sign up, ignore this email.`); }
+  catch (e) { console.error('mail error:', e.message); throw httpErr(502, /535|Username and Password|Invalid credentials|AUTH/i.test(e.message) ? 'Gmail refused the login. Check the Gmail address and the 16-letter App password (run SETUP-AND-START.bat again).' : 'Could not send the email: ' + String(e.message).slice(0, 140)); }
   return code;
 }
 function newUid() {
@@ -137,14 +142,14 @@ async function runJob(id) {
   if (!v) return;
   const setStage = (s) => db.prepare("UPDATE videos SET status='working', stage=? WHERE id=?").run(s, id);
   try {
-    setStage('Starting…');
-    const result = await processVideo(v, setStage);
+    setStage('Startingâ€¦');
+    const result = await processVideo(v, setStage, db.prepare('SELECT name, uid FROM users WHERE id=?').get(v.user_id));
     db.prepare("UPDATE videos SET status='done', stage='Done', result=? WHERE id=?").run(JSON.stringify(result), id);
   } catch (e) {
     console.error('job failed:', e.message);
     db.prepare("UPDATE videos SET status='error', error=? WHERE id=?").run(String(e.message).slice(0, 300), id);
   } finally {
-    fs.rm(v.path, { force: true }, () => {}); // keep the transcript, delete the big video file
+    // Keep the original recording in ClassVault for six months. The expiry cleanup below removes it later.
   }
 }
 function ownVideo(user, id) {
@@ -153,10 +158,48 @@ function ownVideo(user, id) {
   return v;
 }
 
+const VAULT_RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
+const BACKUP_KEEP = 7;
+function makeDatabaseBackup() {
+  // VACUUM INTO creates a consistent SQLite snapshot, including committed WAL data.
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const target = path.join(BACKUPS, `app-${stamp}.db`);
+  try {
+    db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
+    const backups = fs.readdirSync(BACKUPS).filter(n => /^app-.*\.db$/.test(n))
+      .map(name => ({ name, time: fs.statSync(path.join(BACKUPS, name)).mtimeMs }))
+      .sort((a, b) => b.time - a.time);
+    for (const old of backups.slice(BACKUP_KEEP)) fs.rmSync(path.join(BACKUPS, old.name), { force: true });
+    console.log(`Database snapshot saved (${backups.length > BACKUP_KEEP ? BACKUP_KEEP : backups.length} retained).`);
+    return true;
+  } catch (e) {
+    console.error('Database backup failed:', e.message);
+    try { fs.rmSync(target, { force: true }); } catch {}
+    return false;
+  }
+}
+// Small rolling metadata backups; uploaded media files are not duplicated by this process.
+makeDatabaseBackup();
+setInterval(makeDatabaseBackup, 24 * 60 * 60 * 1000).unref();
+
+function cleanupExpiredVault() {
+  const cutoff = Date.now() - VAULT_RETENTION_MS;
+  // Never remove active jobs. Delete the database row only after its file is gone (or already missing).
+  const old = db.prepare("SELECT id,path FROM videos WHERE created < ? AND status NOT IN ('queued','working')").all(cutoff);
+  for (const v of old) {
+    try {
+      fs.rmSync(v.path, { force: true });
+      db.prepare("DELETE FROM videos WHERE id=? AND created < ? AND status NOT IN ('queued','working')").run(v.id, cutoff);
+    } catch (e) { console.error('Expired ClassVault item retained because file cleanup failed:', e.message); }
+  }
+}
+cleanupExpiredVault();
+setInterval(cleanupExpiredVault, 6 * 60 * 60 * 1000).unref();
+
 /* ---------- live meetings (rooms, shared speaker-labelled transcript over SSE) ---------- */
 const rooms = new Map();
 const live = (code) => { let r = rooms.get(code); if (!r) { r = { clients: new Set(), removed: new Set(), hands: new Set() }; rooms.set(code, r); } return r; };
-const people = (code) => { const seen = new Map(); for (const c of live(code).clients) seen.set(c.user.uid, { id: c.user.uid, name: c.user.name, hand: live(code).hands.has(c.user.uid) }); return [...seen.values()]; };
+const people = (code) => { const seen = new Map(); const hostId = db.prepare('SELECT host_id FROM meetings WHERE code=?').get(code)?.host_id; for (const c of live(code).clients) seen.set(c.user.uid, { id: c.user.uid, name: c.user.name, role: c.user.id === hostId ? 'host' : 'participant', hand: live(code).hands.has(c.user.uid) }); return [...seen.values()]; };
 function emit(code, ev, data, onlyUid) {
   const msg = `event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const c of live(code).clients) { if (onlyUid && c.user.uid !== onlyUid) continue; try { c.res.write(msg); } catch { /* closed */ } }
@@ -183,12 +226,7 @@ async function api(req, res, url) {
   const m = req.method, p = url.pathname, ip = clientIp(req);
   if (m !== 'GET' && req.headers['x-requested-with'] !== 'cm') throw httpErr(403, 'Blocked request.');
 
-  if (m === 'GET' && p === '/api/me') { const u = currentUser(req); return send(res, 200, { user: u ? pub(u) : null }); }
-  if (m === 'GET' && p === '/api/demo/sample') {
-    const mockT = JSON.parse(fs.readFileSync(path.join(__dirname, 'mock', 'transcript.json'), 'utf8'));
-    const mockA = JSON.parse(fs.readFileSync(path.join(__dirname, 'mock', 'analysis.json'), 'utf8'));
-    return send(res, 200, { transcript: mockT, analysis: mockA });
-  }
+  if (m === 'GET' && p === '/api/me') { const u = currentUser(req); return send(res, 200, { user: u ? pub(u) : null, mail: mailConfigured() }); }
 
   if (m === 'POST' && p === '/api/signup') {
     if (limited('su:' + ip, 10, 15 * 60000)) throw httpErr(429, 'Too many attempts. Try again later.');
@@ -245,13 +283,14 @@ async function api(req, res, url) {
   }
 
   if (m === 'PUT' && p === '/api/videos') {
-    const u = needUser(req);
+    const u = currentUser(req) || db.prepare('SELECT * FROM users ORDER BY id ASC LIMIT 1').get();
+    if (!u) throw httpErr(401, 'Please log in or sign up first.');
     if (limited('up:' + u.id, 30, 36e5)) throw httpErr(429, 'Too many uploads. Try again later.');
     const MAX = (+E.MAX_UPLOAD_MB || 2048) * 1048576;
     if ((+req.headers['content-length'] || 0) > MAX) throw httpErr(413, 'File too large.');
     const name = String(url.searchParams.get('name') || 'video').replace(/[^\w.\- ]/g, '_').slice(0, 120);
     const ext = path.extname(name).toLowerCase();
-    if (!MEDIA_EXT.has(ext)) throw httpErr(400, 'Upload a video or audio file (mp4, mov, webm, mkv, mp3, wav…).');
+    if (!MEDIA_EXT.has(ext)) throw httpErr(400, 'Upload a video or audio file (mp4, mov, webm, mkv, mp3, wavâ€¦).');
     const id = crypto.randomUUID(), fp = path.join(UP, id + ext);
     let n = 0;
     const cap = new Transform({ transform(c, _e, cb) { n += c.length; n > MAX ? cb(httpErr(413, 'File too large.')) : cb(null, c); } });
@@ -300,55 +339,38 @@ async function api(req, res, url) {
     if (m === 'GET' && act === 'transcript') {
       const mine = isHost || db.prepare('SELECT 1 FROM mlines WHERE code=? AND uid=?').get(code, u.uid);
       if (!mine) throw httpErr(403, 'Not allowed.');
-      const rawLines = db.prepare('SELECT uid AS id, name, text, ts FROM mlines WHERE code=? ORDER BY id').all(code);
-      const formatted = rawLines.map(l => {
-        const d = new Date(l.ts);
-        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        return { id: l.id, name: l.name, text: l.text, ts: l.ts, timeStr };
-      });
-      const fmt = url.searchParams.get('format');
-      if (fmt === 'csv') {
-        const csvRows = ['"Time","ID","Name","Transcript"'];
-        for (const r of formatted) {
-          csvRows.push(`"${r.timeStr}","${r.id}","${(r.name || '').replace(/"/g, '""')}","${(r.text || '').replace(/"/g, '""')}"`);
-        }
-        res.writeHead(200, {
-          'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="transcript-${code}.csv"`,
-          'Cache-Control': 'no-store'
-        });
-        return res.end(csvRows.join('\r\n'));
-      }
-      if (fmt === 'txt') {
-        const txtRows = formatted.map(r => `[${r.timeStr}] [${r.id}] ${r.name}: ${r.text}`);
-        res.writeHead(200, {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Content-Disposition': `attachment; filename="transcript-${code}.txt"`,
-          'Cache-Control': 'no-store'
-        });
-        return res.end(txtRows.join('\r\n'));
-      }
-      return send(res, 200, { code, lines: formatted });
+      return send(res, 200, { code, lines: db.prepare('SELECT uid AS id, name, text, ts FROM mlines WHERE code=? ORDER BY id').all(code) });
     }
-    if (m === 'POST' && act === 'simulate') {
+    if (m === 'POST' && act === 'signal') {
       if (mt.ended) throw httpErr(410, 'This meeting has ended.');
-      const sampleDialogues = [
-        { id: 'CM-102941', name: 'Rahul Verma', text: 'Good morning everyone! Can everyone see the screen clearly?' },
-        { id: 'CM-108253', name: 'Ananya Patel', text: 'Yes, audio and video are crystal clear. Thanks Rahul!' },
-        { id: 'CM-105190', name: 'David Chen', text: 'Could we clarify the expected submission format for the assignment?' },
-        { id: u.uid, name: u.name, text: 'Please submit a single Markdown file (.md) or exported Jupyter notebook (.ipynb).' },
-        { id: 'CM-102941', name: 'Rahul Verma', text: 'Understood. Should we include sample images and link references as well?' },
-        { id: u.uid, name: u.name, text: 'Yes, make sure your image links contain proper alt text descriptions.' },
-        { id: 'CM-108253', name: 'Ananya Patel', text: 'Thank you! We will finalize our documents and submit on time.' }
-      ];
-      let delay = 0;
-      for (const item of sampleDialogues) {
-        const line = { id: item.id, name: item.name, text: item.text, ts: Date.now() + delay };
-        db.prepare('INSERT INTO mlines(code,uid,name,text,ts) VALUES(?,?,?,?,?)').run(code, item.id, item.name, item.text, line.ts);
-        emit(code, 'line', line);
-        delay += 600;
-      }
-      return send(res, 200, { ok: true, count: sampleDialogues.length });
+      const room = live(code);
+      if (![...room.clients].some((c) => c.user.uid === u.uid)) throw httpErr(403, 'Join the meeting first.');
+      const b = await readJson(req);
+      const target = String(b.target || '').slice(0, 100);
+      const type = String(b.type || '');
+      if (!target || target === u.uid || !['offer','answer','ice'].includes(type)) throw httpErr(400, 'Invalid meeting connection signal.');
+      if (![...room.clients].some((c) => c.user.uid === target)) throw httpErr(404, 'That participant is no longer connected.');
+      const payload = b.payload;
+      if (!payload || typeof payload !== 'object' || JSON.stringify(payload).length > 120000) throw httpErr(400, 'Invalid or oversized connection signal.');
+      emit(code, 'signal', { from: u.uid, type, payload }, target);
+      return send(res, 200, { ok: true });
+    }
+    if (m === 'POST' && act === 'chat') {
+      if (mt.ended) throw httpErr(410, 'This meeting has ended.');
+      if (![...live(code).clients].some((c) => c.user.uid === u.uid)) throw httpErr(403, 'Join the meeting first.');
+      if (limited('chat:' + u.id, 60, 60000)) throw httpErr(429, 'Too many messages. Slow down.');
+      const text = String((await readJson(req)).text || '').trim().slice(0, 1000);
+      if (!text) throw httpErr(400, 'Type a message first.');
+      emit(code, 'chat', { id: u.uid, name: u.name, text, ts: Date.now() });
+      return send(res, 200, { ok: true });
+    }
+    if (m === 'POST' && act === 'react') {
+      if (mt.ended) throw httpErr(410, 'This meeting has ended.');
+      if (![...live(code).clients].some((c) => c.user.uid === u.uid)) throw httpErr(403, 'Join the meeting first.');
+      const emoji = String((await readJson(req)).emoji || '').trim();
+      if (!['ðŸ‘','ðŸ‘','â¤ï¸','ðŸ˜‚','ðŸŽ‰','ðŸ¤”','âœ‹'].includes(emoji)) throw httpErr(400, 'Unsupported reaction.');
+      emit(code, 'reaction', { id: u.uid, name: u.name, emoji, ts: Date.now() });
+      return send(res, 200, { ok: true });
     }
     if (m === 'POST' && act === 'line') {
       if (mt.ended) throw httpErr(410, 'This meeting has ended.');
@@ -393,35 +415,160 @@ async function api(req, res, url) {
   }
 
   let mm;
-  if (m === 'GET' && (mm = /^\/api\/videos\/([\w-]+)$/.exec(p))) {
+  if (m === 'GET' && p === '/api/backups') {
+    needUser(req);
+    const items = fs.readdirSync(BACKUPS).filter(n => /^full-\d{4}-/.test(n)).map(name => {
+      const dir = path.join(BACKUPS, name); let bytes = 0;
+      const walk = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else bytes += fs.statSync(f).size; } };
+      try { walk(dir); } catch {}
+      return { name, bytes, created: fs.statSync(dir).mtimeMs };
+    }).sort((a,b)=>b.created-a.created);
+    return send(res, 200, { items });
+  }
+  if (m === 'POST' && p === '/api/backups') {
+    const u = needUser(req);
+    if (limited('backup:' + u.id, 5, 60 * 60 * 1000)) throw httpErr(429, 'You have created several backups recently. Wait before creating another.');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const target = path.join(BACKUPS, 'full-' + stamp);
+    fs.mkdirSync(target, { recursive: true });
+    try {
+      const dbTarget = path.join(target, 'app.db');
+      db.exec(`VACUUM INTO '${dbTarget.replace(/'/g, "''")}'`);
+      const uploadTarget = path.join(target, 'uploads');
+      if (fs.existsSync(UP)) fs.cpSync(UP, uploadTarget, { recursive: true, errorOnExist: true });
+      const manifest = { app: 'AI Knowledge System', created: new Date().toISOString(), includes: ['app.db', 'uploads/'], note: 'Private backup. Stop the app before restoring. Keep this folder private.' };
+      fs.writeFileSync(path.join(target, 'manifest.json'), JSON.stringify(manifest, null, 2));
+      const dirs = fs.readdirSync(BACKUPS).filter(n => /^full-\d{4}-/.test(n)).map(name => ({name,time:fs.statSync(path.join(BACKUPS,name)).mtimeMs})).sort((a,b)=>b.time-a.time);
+      for (const old of dirs.slice(3)) fs.rmSync(path.join(BACKUPS, old.name), { recursive:true, force:true });
+      const bytes = (() => { let total=0; const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory())walk(f);else total+=fs.statSync(f).size;}};walk(target);return total; })();
+      console.log('Full data backup created:', target);
+      return send(res, 201, { ok:true, name:path.basename(target), bytes, created:manifest.created, note:'Includes a consistent database snapshot and uploaded recordings. Copy this backup to another drive for protection against computer failure.' });
+    } catch (e) {
+      try { fs.rmSync(target, { recursive:true, force:true }); } catch {}
+      console.error('Full backup failed:', e.message);
+      throw httpErr(500, 'Full backup failed. Check available disk space and file permissions, then try again.');
+    }
+  }
+  if (m === 'GET' && p === '/api/vault') {
+    const u = needUser(req);
+    const rows = db.prepare('SELECT id,filename,title,status,stage,error,result,created,path FROM videos WHERE user_id=? ORDER BY created DESC').all(u.id);
+    return send(res, 200, { retentionDays: 180, items: rows.map(v => {
+      let summary = '';
+      try { summary = JSON.parse(v.result || '{}').summary || ''; } catch {}
+      return { id: v.id, filename: v.filename, title: v.title || v.filename, status: v.status, stage: v.stage, error: v.error, summary: String(summary).slice(0, 280), created: v.created, expires: v.created + VAULT_RETENTION_MS, recordingAvailable: fs.existsSync(v.path) };
+    }) });
+  }
+  if (m === 'GET' && p === '/api/vault/health') {
+    const u = needUser(req);
+    const rows = db.prepare('SELECT id,filename,path,status,result,created FROM videos WHERE user_id=? ORDER BY created DESC').all(u.id);
+    const missingRecordings = rows.filter(v => !fs.existsSync(v.path) && !['queued','working'].includes(v.status)).map(v => ({ id: v.id, filename: v.filename }));
+    const invalidResults = rows.filter(v => v.status === 'done' && v.result).filter(v => { try { JSON.parse(v.result); return false; } catch { return true; } }).map(v => ({ id: v.id, filename: v.filename }));
+    const integrity = db.prepare('PRAGMA quick_check').all().map(x => Object.values(x)[0]);
+    return send(res, 200, { ok: integrity.every(x => x === 'ok') && !invalidResults.length, database: integrity, totalClasses: rows.length, missingRecordings, invalidResults, note: 'Database checks cover saved metadata and file references. They cannot recover missing files or guarantee that external backups exist.' });
+  }
+  if (m === 'PUT' && (mm = /^\/api\/videos\/([\w-]+)\/title$/.exec(p))) {
+    const u = needUser(req), v = ownVideo(u, mm[1]), b = await readJson(req);
+    const title = String(b.title || '').trim().replace(/[<>\u0000-\u001f]/g, '').slice(0, 100);
+    if (!title) throw httpErr(400, 'Enter a class name.');
+    db.prepare('UPDATE videos SET title=? WHERE id=? AND user_id=?').run(title, v.id, u.id);
+    return send(res, 200, { ok: true, title });
+  }
+  if (m === 'DELETE' && (mm = /^\/api\/videos\/([\w-]+)$/.exec(p))) {
+    const u = needUser(req), v = ownVideo(u, mm[1]);
+    if (['queued','working'].includes(v.status)) throw httpErr(409, 'This class is still processing. Wait for processing to finish before deleting it.');
+    try { fs.rmSync(v.path, { force: true }); }
+    catch (e) { console.error('vault file cleanup:', e.message); throw httpErr(500, 'The recording could not be deleted, so its ClassVault entry was kept safe. Try again.'); }
+    const result = db.prepare("DELETE FROM videos WHERE id=? AND user_id=? AND status NOT IN ('queued','working')").run(v.id, u.id);
+    if (!result.changes) throw httpErr(409, 'This class changed while you were deleting it. Refresh ClassVault and try again.');
+    return send(res, 200, { ok: true });
+  }
+  if (m === 'GET' && (mm = /^\/api\/videos\/([\w-]+)\/recording$/.exec(p))) {
     const v = ownVideo(needUser(req), mm[1]);
+    if (!fs.existsSync(v.path)) throw httpErr(404, 'The original recording is no longer available. Its analysis may still be in ClassVault.');
+    const st = fs.statSync(v.path), ext = path.extname(v.filename).toLowerCase();
+    const types = { '.mp4':'video/mp4','.mov':'video/quicktime','.webm':'video/webm','.mkv':'video/x-matroska','.avi':'video/x-msvideo','.m4v':'video/mp4','.mp3':'audio/mpeg','.wav':'audio/wav','.m4a':'audio/mp4','.ogg':'audio/ogg','.aac':'audio/aac' };
+    const range = req.headers.range;
+    if (range) {
+      const mRange = /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (!mRange) throw httpErr(416, 'Invalid byte range.');
+      const start = mRange[1] ? Number(mRange[1]) : 0;
+      const end = mRange[2] ? Math.min(Number(mRange[2]), st.size - 1) : st.size - 1;
+      if (start > end || start >= st.size) { res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }); return res.end(); }
+      res.writeHead(206, { 'Content-Type': types[ext] || 'application/octet-stream', 'Content-Length': end - start + 1, 'Accept-Ranges':'bytes', 'Content-Range': `bytes ${start}-${end}/${st.size}`, 'Cache-Control':'no-store' });
+      return fs.createReadStream(v.path, { start, end }).pipe(res);
+    }
+    res.writeHead(200, { 'Content-Type': types[ext] || 'application/octet-stream', 'Content-Length': st.size, 'Accept-Ranges':'bytes', 'Cache-Control':'no-store' });
+    return fs.createReadStream(v.path).pipe(res);
+  }
+  if (m === 'GET' && (mm = /^\/api\/videos\/([\w-]+)$/.exec(p))) {
+    const u = currentUser(req) || db.prepare('SELECT * FROM users ORDER BY id ASC LIMIT 1').get();
+    const v = u ? ownVideo(u, mm[1]) : db.prepare('SELECT * FROM videos WHERE id=?').get(mm[1]);
+    if (!v) throw httpErr(404, 'Video not found.');
     return send(res, 200, { status: v.status, stage: v.stage, error: v.error, result: v.result ? JSON.parse(v.result) : null });
   }
   if (m === 'POST' && (mm = /^\/api\/videos\/([\w-]+)\/alerts$/.exec(p))) {
     const u = needUser(req), v = ownVideo(u, mm[1]), b = await readJson(req);
     if (v.status !== 'done') throw httpErr(400, 'Not ready yet.');
     if (limited('al:' + u.id, 20, 36e5)) throw httpErr(429, 'Too many alerts. Try again later.');
+    if (!mailConfigured()) throw httpErr(503, 'Email is not set up on this server, so the alert was not sent. Add the SMTP settings to .env (see README) and restart.');
     let tasks = JSON.parse(v.result).tasks;
     if (Number.isInteger(b.index)) tasks = tasks.slice(b.index, b.index + 1);
     if (!tasks.length) throw httpErr(400, 'No tasks to send.');
     const lines = tasks.map((t, i) => `${i + 1}. ${t.task}\n   Who: ${t.owner} · Due: ${t.due}`).join('\n');
-    try { await sendMail(u.email, `ClassMind task alert: ${v.filename}`, `Tasks mentioned in "${v.filename}":\n\n${lines}\n`); }
-    catch { throw httpErr(502, 'Could not send the email.'); }
+    try { await sendMail(u.email, `AI Knowledge System task alert: ${v.filename}`, `Tasks mentioned in "${v.filename}":\n\n${lines}\n`); }
+    catch(err) {
+	console.error('EMAIL SEND ERROR:', err);
+  	throw httpErr(502, 'Could not send the email. Check Render logs for the actual error.');
+    }
     return send(res, 200, { sent: tasks.length });
   }
-  if (m === 'POST' && (mm = /^\/api\/videos\/([\w-]+)\/ask$/.exec(p))) {
-    const u = needUser(req), v = ownVideo(u, mm[1]), b = await readJson(req);
-    const q = String(b.question || '').trim().slice(0, 500);
+  if (m === 'POST' && p === '/api/askora') {
+    const u = currentUser(req) || db.prepare('SELECT * FROM users ORDER BY id ASC LIMIT 1').get() || { name: 'Student', uid: 'CM-001' };
+    const b = await readJson(req);
+    const q = String(b.question || '').trim().slice(0, 4000);
     if (!q) throw httpErr(400, 'Type a question.');
-    if (v.status !== 'done') throw httpErr(400, 'Not ready yet.');
-    if (limited('ak:' + u.id, 60, 36e5)) throw httpErr(429, 'Too many questions. Try again later.');
+    // Unlimited questions supported for all users
+    const history = Array.isArray(b.history) ? b.history.slice(-16) : [];
+    try {
+      const answer = await askora(q, history, u.name);
+      if (typeof answer !== 'string' || !answer.trim()) throw new Error('Askora returned an empty answer.');
+      return send(res, 200, { answer });
+    } catch (e) {
+      const message = String(e && e.message || '');
+      if (/429|quota|rate.?limit|usage limit/i.test(message)) {
+        throw httpErr(429, 'OpenAI usage quota reached. Check your OpenAI account billing and limits.');
+      }
+      if (/503|temporarily busy|overloaded|high demand/i.test(message)) {
+        throw httpErr(503, 'The AI service is temporarily busy. Please try again.');
+      }
+      if (/401|403|API key|credential|model.*not found|rejected the API request/i.test(message)) {
+        console.error('Askora AI configuration error:', message);
+        throw httpErr(502, 'AI configuration error: ' + message);
+      }
+      console.error('Askora request failed:', e);
+      throw httpErr(502, 'Askora error: ' + (e.message || 'The AI service returned an error.'));
+    }
+  }
+  if (m === 'POST' && (mm = /^\/api\/videos\/([\w-]+)\/ask$/.exec(p))) {
+    const u = currentUser(req) || db.prepare('SELECT * FROM users ORDER BY id ASC LIMIT 1').get();
+    const v = u ? ownVideo(u, mm[1]) : db.prepare('SELECT * FROM videos WHERE id=?').get(mm[1]);
+    if (!v) throw httpErr(404, 'Video not found.');
+    const b = await readJson(req);
+    const q = String(b.question || '').trim().slice(0, 1000);
+    if (!q) throw httpErr(400, 'Type a question.');
+    if (v.status !== 'done') throw httpErr(400, 'The video analysis is not ready yet.');
+    // Unlimited questions supported for all users
     return send(res, 200, { answer: await ask(JSON.parse(v.result).transcript, q) });
   }
   throw httpErr(404, 'Not found.');
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 function serveStatic(req, res, url) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self)');
   if (req.method !== 'GET' && req.method !== 'HEAD') throw httpErr(405, 'Method not allowed.');
   let rel;
   try { rel = decodeURIComponent(url.pathname); } catch { throw httpErr(400, 'Bad path.'); }
@@ -435,9 +582,15 @@ function serveStatic(req, res, url) {
   fs.createReadStream(file).pipe(res);
 }
 
-const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' *; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 const server = http.createServer(async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With, Authorization');
   if (req.method === 'OPTIONS') {
@@ -458,10 +611,19 @@ const server = http.createServer(async (req, res) => {
     send(res, e.status || 500, { error: e.status ? e.message : 'Server error.' });
   }
 });
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error('\nERROR: AI Knowledge System is ALREADY RUNNING in another black window (or an older copy is).');
+    console.error('Close every black window, then double-click SETUP-AND-START.bat again.\n');
+    process.exit(1);
+  }
+  throw e;
+});
 server.requestTimeout = 0; // allow long uploads
 server.headersTimeout = 65000;
 server.listen(PORT, E.HOST || '0.0.0.0', () => {
-  console.log(`ClassMind running at http://localhost:${PORT}${E.MOCK === '1' ? '  (DEMO MODE: built-in sample transcript)' : ''}`);
+  console.log(`AI Knowledge System running at http://localhost:${PORT}${E.MOCK === '1' ? '  (DEMO MODE: built-in sample transcript)' : ''}`);
   if (!mailConfigured()) console.log('Email: no RESEND_API_KEY set. Codes and alerts are printed here and codes are shown in the page (development only).');
 });
 module.exports = { ts };
+

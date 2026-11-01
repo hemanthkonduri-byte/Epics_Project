@@ -4,6 +4,11 @@ Full project: website + backend. Accounts with email verification, video upload 
 speaker-labelled transcript, summary, 15-question quiz, flashcards, task alerts by email, "Ask AI",
 and live meetings with a shared speaker-labelled transcript. No npm packages needed.
 
+## Easiest way on Windows
+1. Unzip, open the `epics` folder.
+2. Double-click `SETUP-AND-START.bat` the first time. It asks for your Gmail address, Gmail App password and (optionally) the two API keys, writes the settings file for you, and starts the app.
+3. Next time, double-click `START-APP.bat`.
+
 ## Requirements
 - Node.js 22.5 or newer (https://nodejs.org)
 - ffmpeg on PATH (Windows: `winget install ffmpeg`; Mac: `brew install ffmpeg`)
@@ -18,7 +23,12 @@ Demo mode returns the built-in sample transcript for any upload.
    - `SESSION_SECRET` long random text
    - `ASSEMBLYAI_API_KEY` speech-to-text with speaker labels
    - `ANTHROPIC_API_KEY` summary, quiz, flashcards, tasks, Ask AI
-   - `RESEND_API_KEY` and `MAIL_FROM` real emails for codes and alerts
+   - Real emails for codes and alerts, choose one:
+     - **Gmail (easiest):** turn on 2-Step Verification, create an App password at https://myaccount.google.com/apppasswords, then set
+       `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=you@gmail.com`, `SMTP_PASS=<16-letter app password>`,
+       `MAIL_FROM=ClassMind <you@gmail.com>`. Restart the server. Codes and task alerts then arrive in the real inbox.
+     - **Resend:** `RESEND_API_KEY` and `MAIL_FROM` (needs a verified domain to email other people).
+     When email is configured, the code is no longer shown on the page.
 2. `npm start`
 
 ## Live meetings (built)
