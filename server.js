@@ -563,7 +563,7 @@ async function api(req, res, url) {
   throw httpErr(404, 'Not found.');
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.apk': 'application/vnd.android.package-archive' };
 function serveStatic(req, res, url) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -576,13 +576,17 @@ function serveStatic(req, res, url) {
   if (!file.startsWith(PUB + path.sep)) throw httpErr(404, 'Not found.');
   let st;
   try { st = fs.statSync(file); } catch { throw httpErr(404, 'Not found.'); }
-  res.writeHead(200, {
+  const headers = {
     'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
     'Content-Length': st.size,
     'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
     'Pragma': 'no-cache',
     'Expires': '0'
-  });
+  };
+  if (path.extname(file) === '.apk') {
+    headers['Content-Disposition'] = 'attachment; filename="app-debug.apk"';
+  }
+  res.writeHead(200, headers);
   if (req.method === 'HEAD') return res.end();
   fs.createReadStream(file).pipe(res);
 }
@@ -608,6 +612,20 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Permissions-Policy', 'microphone=(self), camera=(self)');
   try {
     const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/app-debug.apk' || url.pathname === '/download-apk' || url.pathname === '/download/apk') {
+      const apkPath = path.join(__dirname, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+      if (fs.existsSync(apkPath)) {
+        const st = fs.statSync(apkPath);
+        res.writeHead(200, {
+          'Content-Type': 'application/vnd.android.package-archive',
+          'Content-Length': st.size,
+          'Content-Disposition': 'attachment; filename="app-debug.apk"',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        });
+        if (req.method === 'HEAD') return res.end();
+        return fs.createReadStream(apkPath).pipe(res);
+      }
+    }
     if (url.pathname.startsWith('/api/')) await api(req, res, url);
     else serveStatic(req, res, url);
   } catch (e) {
