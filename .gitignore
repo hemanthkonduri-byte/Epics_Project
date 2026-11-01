@@ -7,3 +7,7 @@ services_files/
 services_html_backup.txt.js
 server-broken-backup.js
 epics/
+android/app/build/
+android/build/
+android/.gradle/
+*.keystore
