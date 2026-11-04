@@ -11,3 +11,5 @@ android/app/build/
 android/build/
 android/.gradle/
 *.keystore
+cloudflared.exe
+tunnel.log

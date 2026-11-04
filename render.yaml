@@ -7,7 +7,7 @@ services:
     startCommand: node server.js
     envVars:
       - key: NODE_VERSION
-        value: 22.0.0
+        value: 22.14.0
       - key: PORT
         value: 10000
       - key: SESSION_SECRET
@@ -22,6 +22,8 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3-flash-preview
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
