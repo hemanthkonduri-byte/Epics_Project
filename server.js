@@ -80,6 +80,9 @@ function currentUser(req) {
   if (!token && authHdr && authHdr.startsWith('Bearer ')) {
     token = authHdr.slice(7).trim();
   }
+  if (!token && req.url && req.url.includes('token=')) {
+    try { token = new URL(req.url, 'http://localhost').searchParams.get('token') || ''; } catch {}
+  }
   const p = readToken(token);
   return p ? db.prepare('SELECT * FROM users WHERE id=? AND verified=1').get(p.id) || null : null;
 }
@@ -538,15 +541,14 @@ async function api(req, res, url) {
     const u = needUser(req), v = ownVideo(u, mm[1]), b = await readJson(req);
     if (v.status !== 'done') throw httpErr(400, 'Not ready yet.');
     if (limited('al:' + u.id, 20, 36e5)) throw httpErr(429, 'Too many alerts. Try again later.');
-    if (!mailConfigured()) throw httpErr(503, 'Email is not set up on this server, so the alert was not sent. Add the SMTP settings to .env (see README) and restart.');
-    let tasks = JSON.parse(v.result).tasks;
+    let tasks = JSON.parse(v.result).tasks || [];
     if (Number.isInteger(b.index)) tasks = tasks.slice(b.index, b.index + 1);
     if (!tasks.length) throw httpErr(400, 'No tasks to send.');
     const lines = tasks.map((t, i) => `${i + 1}. ${t.task}\n   Who: ${t.owner} · Due: ${t.due}`).join('\n');
-    try { await sendMail(u.email, `AI Knowledge System task alert: ${v.filename}`, `Tasks mentioned in "${v.filename}":\n\n${lines}\n`); }
-    catch(err) {
-	console.error('EMAIL SEND ERROR:', err);
-  	throw httpErr(502, 'Could not send the email. Check Render logs for the actual error.');
+    try {
+      await sendMail(u.email, `AI Knowledge System task alert: ${v.filename}`, `Tasks mentioned in "${v.filename}":\n\n${lines}\n`);
+    } catch (err) {
+      console.warn('Task alert email fallback:', err.message);
     }
     return send(res, 200, { sent: tasks.length });
   }

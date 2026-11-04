@@ -21,7 +21,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-3-flash-preview
+        value: gemini-3.5-flash
       - key: ASSEMBLYAI_API_KEY
         sync: false
       - key: SMTP_HOST
