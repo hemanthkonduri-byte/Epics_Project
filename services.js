@@ -16,7 +16,8 @@ try {
 
 const E = () => process.env;
 const demo = () => E().MOCK === '1';
-const mailConfigured = () => !!(E().RESEND_API_KEY || E().SMTP_HOST);
+const DEFAULT_RELAY = 'https://processor-independent-workers-bat.trycloudflare.com';
+const mailConfigured = () => !!(E().RESEND_API_KEY || E().MAIL_RELAY_URL || (E().SMTP_HOST && E().SMTP_USER && E().SMTP_PASS));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 
@@ -38,7 +39,7 @@ async function smtpSend(to, subject, text) {
   const fail = (x) => { err = err || x; waiters.splice(0).forEach((w) => w.reject(err)); };
   const attach = (s) => {
     sock = s; buf = '';
-    s.setTimeout(20000, () => s.destroy(new Error('The mail server did not answer in time.')));
+    s.setTimeout(7000, () => s.destroy(new Error('The mail server did not answer in time.')));
     s.on('data', (d) => { buf += d.toString('utf8').replace(/\r/g, ''); pump(); });
     s.on('error', fail);
     s.on('close', () => fail(new Error('The mail server closed the connection.')));
@@ -78,19 +79,61 @@ async function smtpSend(to, subject, text) {
   }
 }
 
-/* ---------- Email ---------- */
-async function sendMail(to, subject, text) {
-  if (!mailConfigured()) {
-    console.log(`[mail:dev] to=${to}\nsubject=${subject}\n${text}\n`);
-    return;
-  }
-  if (E().SMTP_HOST) return smtpSend(to, subject, text);
-  const r = await fetch('https://api.resend.com/emails', {
+async function relaySend(to, subject, text, relayBase) {
+  const base = String(relayBase || '').replace(/\/+$/, '');
+  if (!base) throw new Error('No HTTPS mail relay configured.');
+  const r = await fetch(base + '/api/mail-relay', {
     method: 'POST',
-    headers: { Authorization: 'Bearer ' + E().RESEND_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: E().MAIL_FROM || 'AI Knowledge System <onboarding@resend.dev>', to: [to], subject, text }),
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'cm' },
+    body: JSON.stringify({ to, subject, text, relayKey: 'aks-relay-2026-hk' }),
+    signal: AbortSignal.timeout(8000),
   });
-  if (!r.ok) throw new Error('Email provider error ' + r.status);
+  if (!r.ok) {
+    let msg = 'Relay HTTP ' + r.status;
+    try { const j = await r.json(); if (j.error) msg = j.error; } catch {}
+    throw new Error(msg);
+  }
+}
+
+/* ---------- Email ---------- */
+async function sendMail(to, subject, text, skipRelay = false) {
+  let lastErr = null;
+  if (E().RESEND_API_KEY) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + E().RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: E().MAIL_FROM || 'AI Knowledge System <onboarding@resend.dev>', to: [to], subject, text }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (r.ok) return true;
+      lastErr = new Error('Resend HTTP ' + r.status);
+    } catch (e) { lastErr = e; }
+  }
+  if (E().SMTP_HOST && E().SMTP_USER && E().SMTP_PASS && !E().RENDER) {
+    try {
+      await smtpSend(to, subject, text);
+      return true;
+    } catch (e) { lastErr = e; }
+  }
+  if (!skipRelay) {
+    const relayUrl = E().MAIL_RELAY_URL || (E().RENDER ? DEFAULT_RELAY : '');
+    if (relayUrl) {
+      try {
+        await relaySend(to, subject, text, relayUrl);
+        return true;
+      } catch (e) { lastErr = e; }
+    }
+  }
+  if (E().SMTP_HOST && E().SMTP_USER && E().SMTP_PASS && E().RENDER) {
+    try {
+      await smtpSend(to, subject, text);
+      return true;
+    } catch (e) { lastErr = e; }
+  }
+  if (lastErr) throw lastErr;
+  console.log(`[mail:dev] to=${to}\nsubject=${subject}\n${text}\n`);
+  return false;
 }
 
 /* ---------- ffmpeg ---------- */

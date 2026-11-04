@@ -95,12 +95,12 @@ details{padding:12px 0;border-bottom:1px solid var(--bd)}summary{cursor:pointer}
 <label class="mut" style="display:flex;gap:8px;align-items:center;margin:2px 0"><input type="checkbox" id="rm" checked style="width:auto;margin:0"> Remember me on this device</label>
 <p id="er" class="mut" style="color:var(--bad);min-height:18px"></p>
 <button class="btn" id="go" style="width:100%">Create account</button>
-<div class="card glass" style="margin-top:10px;padding:10px 12px;font-size:12px;border-radius:12px">
+<div id="mobileServerCard" class="card glass" style="display:none;margin-top:10px;padding:10px 12px;font-size:12px;border-radius:12px">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>📡 Mobile Server Link</b><span id="authServerBadge" class="pill" style="font-size:11px">Checking…</span></div>
-<div style="display:flex;gap:6px"><input id="authServerUrl" placeholder="http://192.168.0.3:3000" style="flex:1;font-size:12px;padding:8px;margin:0"><button type="button" class="btn g" id="authSaveServer" style="padding:6px 10px;font-size:12px">Save</button><button type="button" class="btn" id="authTestServer" style="padding:6px 10px;font-size:12px">Test</button></div>
-<div id="authServerMsg" class="mut" style="font-size:11px;margin-top:4px">Connecting to your computer at http://192.168.0.3:3000</div>
+<div style="display:flex;gap:6px"><input id="authServerUrl" placeholder="https://ai-knowledge-system.onrender.com" style="flex:1;font-size:12px;padding:8px;margin:0"><button type="button" class="btn g" id="authSaveServer" style="padding:6px 10px;font-size:12px">Save</button><button type="button" class="btn" id="authTestServer" style="padding:6px 10px;font-size:12px">Test</button></div>
+<div id="authServerMsg" class="mut" style="font-size:11px;margin-top:4px">Connecting to server…</div>
 </div>
-<div id="vf" style="display:none"><p class="mut">We sent a 6-digit code to <b id="ve"></b>. Enter it to confirm this email is real.</p><div id="dc" style="display:none;margin:8px 0;padding:10px 12px;border-radius:12px;border:1px dashed var(--ac);font-weight:700"></div><input id="cd" inputmode="numeric" maxlength="6" placeholder="6-digit code"><button class="btn" id="vb" style="width:100%">Verify & continue</button></div>
+<div id="vf" style="display:none"><p class="mut" id="vfMsg">We sent a 6-digit verification code to <b id="ve"></b>. Check your inbox (and Spam folder) or use an option below.</p><div id="dc" style="display:none;margin:8px 0;padding:10px 12px;border-radius:12px;border:1px dashed var(--ac);font-weight:700"></div><input id="cd" inputmode="numeric" maxlength="6" placeholder="6-digit code"><button class="btn" id="vb" style="width:100%">Verify &amp; continue</button><div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button type="button" class="btn g" id="resendBtn" style="flex:1;padding:8px 10px;font-size:13px">↻ Resend email</button><button type="button" class="btn g" id="instantCodeBtn" style="flex:1;padding:8px 10px;font-size:13px">🔑 Instant code</button><button type="button" class="btn g" id="backAuthBtn" style="padding:8px 10px;font-size:13px">← Back</button></div></div>
 </div></div></div>
 
 <div id="app" class="view">
@@ -220,15 +220,24 @@ sg.querySelectorAll('[data-e]').forEach(b=>b.onmousedown=e=>{e.preventDefault();
 sg.querySelectorAll('[data-f]').forEach(b=>b.onmousedown=e=>{e.preventDefault();store.set('cm_saved',(store.get('cm_saved')||[]).filter(y=>y.e!==b.dataset.f));sugg()})}
 $('#em').addEventListener('input',sugg);$('#em').addEventListener('focus',sugg);$('#em').addEventListener('blur',()=>setTimeout(()=>$('#sg').style.display='none',150));
 const isNative = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || (window.location.hostname === 'localhost' && !window.location.port));
-const savedServer = (typeof store !== 'undefined' && store.get('cm_server_url')) || '';
-let API_BASE = savedServer ? savedServer.replace(/\/+$/, '') : (isNative ? 'http://192.168.0.3:3000' : ((window.location && window.location.protocol.startsWith('http')) ? '' : 'http://192.168.0.3:3000'));
+const savedServer = isNative ? ((typeof store !== 'undefined' && store.get('cm_server_url')) || '') : '';
+let API_BASE = savedServer ? savedServer.replace(/\/+$/, '') : (isNative ? 'https://processor-independent-workers-bat.trycloudflare.com' : '');
 let API=true,D=null,vid=null;
 
 function initServerConfig(){
-  const cur = store.get('cm_server_url') || (isNative ? 'http://192.168.0.3:3000' : '');
+  const DEFAULT_MOBILE_SERVER = 'https://processor-independent-workers-bat.trycloudflare.com';
+  if (!isNative) {
+    if (typeof store !== 'undefined') store.set('cm_server_url', '');
+    API_BASE = '';
+  } else {
+    if ($('#mobileServerCard')) $('#mobileServerCard').style.display = 'block';
+    const saved = (typeof store !== 'undefined' && store.get('cm_server_url')) || '';
+    API_BASE = (!saved || saved.includes('192.168.0.3')) ? DEFAULT_MOBILE_SERVER : saved.replace(/\/+$/, '');
+  }
+  const cur = isNative ? API_BASE : window.location.origin;
   if($('#serverUrlInput')) $('#serverUrlInput').value = cur;
   if($('#authServerUrl')) $('#authServerUrl').value = cur;
-  if($('#serverUrlStatus')) $('#serverUrlStatus').textContent = 'Connected server: ' + (API_BASE || 'Local (this device)');
+  if($('#serverUrlStatus')) $('#serverUrlStatus').textContent = 'Connected server: ' + (API_BASE || window.location.origin || 'Local (this device)');
   const testConn = async () => {
     const badge = $('#authServerBadge');
     const msg = $('#authServerMsg');
@@ -238,23 +247,27 @@ function initServerConfig(){
       const hdrs = tok ? { 'Authorization': 'Bearer ' + tok } : {};
       const r = await fetch(`${API_BASE}/api/me`, { credentials: 'include', headers: hdrs });
       if (r.ok) {
-        if (badge) { badge.textContent = 'Online ✅'; badge.style.color = 'var(--good)'; }
-        if (msg) msg.textContent = 'Connected to computer: ' + (API_BASE || 'local');
+        if (badge) { badge.textContent = 'Online ✅'; badge.style.color = 'var(--ok)'; }
+        if (msg) msg.textContent = 'Connected to server: ' + (API_BASE || window.location.origin || 'local');
       } else {
-        if (badge) { badge.textContent = 'Server reachable (' + r.status + ')'; badge.style.color = 'var(--good)'; }
+        if (badge) { badge.textContent = 'Server reachable (' + r.status + ')'; badge.style.color = 'var(--ok)'; }
       }
     } catch (e) {
       if (badge) { badge.textContent = 'Offline ❌'; badge.style.color = 'var(--bad)'; }
-      if (msg) msg.textContent = 'Cannot reach ' + (API_BASE || 'server') + '. Check Wi-Fi connection.';
+      if (msg) msg.textContent = 'Cannot reach ' + (API_BASE || 'server') + '. Check internet connection.';
     }
   };
   const updateServer = (val) => {
     let clean = (val || '').trim().replace(/\/+$/, '');
-    if(clean && !clean.startsWith('http://') && !clean.startsWith('https://')) clean = 'http://' + clean;
-    store.set('cm_server_url', clean);
-    API_BASE = clean || (isNative ? 'http://192.168.0.3:3000' : ((window.location && window.location.protocol.startsWith('http')) ? '' : 'http://192.168.0.3:3000'));
+    if(clean && !clean.startsWith('http://') && !clean.startsWith('https://')) clean = 'https://' + clean;
+    if (isNative) {
+      store.set('cm_server_url', clean);
+      API_BASE = clean || DEFAULT_MOBILE_SERVER;
+    } else {
+      API_BASE = '';
+    }
     toast(clean ? 'Server URL saved: ' + clean : 'Reset to default');
-    if($('#serverUrlStatus')) $('#serverUrlStatus').textContent = 'Connected server: ' + (API_BASE || 'Local');
+    if($('#serverUrlStatus')) $('#serverUrlStatus').textContent = 'Connected server: ' + (API_BASE || window.location.origin || 'Local');
     testConn();
   };
   $('#saveServerBtn')?.addEventListener('click', () => updateServer($('#serverUrlInput').value));
@@ -314,7 +327,7 @@ async function api(path, body, method) {
   return data;
 }
 
-async function apiAuth(em,pw,nm){const er=$('#er');er.textContent='';const g=$('#go');g.disabled=true;try{if(mode=='new'){if(!nm)throw new Error('Enter your name.');const d=await api('/api/signup',{name:nm,email:em,password:pw,role:$('#rl').value});pend={em,pw};$('#ve').textContent=em;g.style.display='none';$('#vf').style.display='block';if(d.devCode)showDev(d.devCode);else toast('Code sent. Check your inbox.')}else{const d=await api('/api/login',{email:em,password:pw,remember:$('#rm').checked});user=d.user;remember(em,pw);enter()}}catch(e){er.textContent=e.message}g.disabled=false}
+async function apiAuth(em,pw,nm){const er=$('#er');er.textContent='';const g=$('#go');g.disabled=true;try{if(mode=='new'){if(!nm)throw new Error('Enter your name.');const d=await api('/api/signup',{name:nm,email:em,password:pw,role:$('#rl').value});pend={em,pw,nm};$('#ve').textContent=em;$('#dc').style.display='none';$('#cd').value='';g.style.display='none';$('#vf').style.display='block';if(d.devCode){showDev(d.devCode,d.mailSent)}else{toast('6-digit verification code sent to '+em)}}else{const d=await api('/api/login',{email:em,password:pw,remember:$('#rm').checked});user=d.user;remember(em,pw);enter()}}catch(e){er.textContent=e.message}g.disabled=false}
 async function apiVerify(){try{const d=await api('/api/verify',{email:pend.em,code:$('#cd').value.trim(),remember:$('#rm').checked});user=d.user;remember(pend.em,pend.pw);enter()}catch(e){$('#er').textContent=e.message}}
 function mmss(ms){const s=Math.floor(ms/1000),f=n=>String(n).padStart(2,'0');return (s>=3600?f(Math.floor(s/3600))+':':'')+f(Math.floor(s%3600/60))+':'+f(s%60)}
 function loadResult(R){D=R;FT=R.transcript.map(l=>[R.demo?'':mmss(l.start),l.speaker,l.text]);quiz={};['Easy','Medium','Hard'].forEach(k=>quiz[k]=(R.quiz[k]||[]).map(x=>[x.q,x.options,x.answer]))}
@@ -326,7 +339,7 @@ catch(e){pg.style.display='none';toast(e.message)}$('#fl').value=''}
 async function sendAlert(b){try{b.disabled=true;await api('/api/videos/'+vid+'/alerts',{index:+b.dataset.i});b.textContent='✓ Alert emailed to '+user.email}catch(e){b.disabled=false;toast(e.message)}}
 async function askApi(q){const m=$('#videoAskMessages');const add=(who,txt)=>{const row=document.createElement('p');row.style.cssText='padding:10px 12px;border-radius:10px;background:var(--bd);white-space:pre-wrap';const b=document.createElement('b');b.textContent=who+': ';row.append(b,document.createTextNode(txt));m.appendChild(row);m.scrollTop=m.scrollHeight};add('You',q);$('#videoAskInput').value='';$('#videoAskSend').disabled=true;$('#videoAskStatus').textContent='Searching the analyzed transcript…';try{const d=await api('/api/videos/'+vid+'/ask',{question:q});add('Ask AI',d.answer);$('#videoAskStatus').textContent='Answer based on this transcript.'}catch(e){add('Ask AI',e.message);$('#videoAskStatus').textContent='Could not answer.'}finally{$('#videoAskSend').disabled=false;$('#videoAskInput').focus()}}
 const initTok = (typeof store !== 'undefined' && store.get('cm_token')) || '';
-fetch(`${API_BASE}/api/me`,{credentials:'include', headers: (initTok ? {'Authorization': 'Bearer ' + initTok} : {})}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d&&'user' in d){API=true;$('#ms').innerHTML=d.mail?'✅ Real email is ON. Codes and alerts are sent to your inbox.':'⚠ Real email is OFF (test mode). Close this window and double-click <b>SETUP-AND-START.bat</b>.';if(d.user){user=d.user;enter()}}}).catch(()=>{});
+fetch(`${API_BASE}/api/me`,{credentials:'include', headers: (initTok ? {'Authorization': 'Bearer ' + initTok} : {})}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d&&'user' in d){API=true;if($('#ms'))$('#ms').innerHTML=d.mail?'✅ Real email is ON. Codes and alerts are sent to your inbox.':'⚠ Real email is OFF (test mode).';if(d.user){user=d.user;enter()}}}).catch(()=>{});
 let rec=null,TL=[],es=null,isHost=false,locked=false,ppl=[],mic=false;
 let cameraOn=false,localStream=null,shareStream=null,handUp=false;
 const peerConnections=new Map(), remoteStreams=new Map();
@@ -353,7 +366,6 @@ $('#inviteBtn').onclick=()=>cp(location.origin+location.pathname+'?meeting='+enc
 $('#k5').onclick=()=>{if(mic){mic=false;try{if(rec)rec.stop()}catch(e){}$('#k5').textContent='🎙 Start transcript';setMeetingStatus('Transcription paused. Click Start transcript to resume.')}else{mic=true;startMic(code)}};
 $('#camBtn').onclick=toggleCamera;$('#shareBtn').onclick=toggleShare;$('#reactBtn').onclick=showReactions;$('#chatBtn').onclick=()=>{$('#chatPanel').style.display=$('#chatPanel').style.display==='none'?'':'none';setMeetingStatus($('#chatPanel').style.display==='none'?'Chat closed.':'Chat opened below the meeting controls.')};$('#chatSend').onclick=sendLocalChat;$('#chatInput').onkeydown=e=>{if(e.key==='Enter')sendLocalChat()};
 if(isHost){$('#k1').onclick=()=>api('/api/rooms/'+code+'/lock',{locked:!locked}).then(()=>{locked=!locked;$('#k1').textContent=locked?'🔓 Unlock room':'🔒 Lock room';setMeetingStatus(locked?'Room locked.':'Room unlocked.')}).catch(e=>toast(e.message));$('#k3').onclick=()=>api('/api/rooms/'+code+'/end',{}).catch(e=>toast(e.message))}else{$('#k4').onclick=e=>{handUp=!handUp;api('/api/rooms/'+code+'/hand',{up:handUp}).catch(err=>toast(err.message));e.target.textContent=handUp?'✋ Lower hand':'✋ Raise hand';setMeetingStatus(handUp?'Your hand is raised.':'Your hand is lowered.')};$('#k3').onclick=closeRoom}}
-async function toggleCamera(){if(cameraOn){if(localStream)localStream.getTracks().forEach(t=>t.stop());localStream=null;cameraOn=false;$('#localVideo').srcObject=null;$('#localVideo').style.display='none';$('#mediaPreview').style.display=shareStream?'':'none';$('#mediaHint').textContent='Camera is off.';$('#camBtn').textContent='📷 Camera: OFF';rt();setMeetingStatus('Camera turned off.');return}try{localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});cameraOn=true;$('#localVideo').srcObject=localStream;$('#localVideo').style.display='none';$('#mediaPreview').style.display=shareStream?'':'none';rt();$('#camBtn').textContent='📷 Camera: ON';setMeetingStatus('Your camera preview is shown inside your participant tile. Remote video is not connected.')}catch(e){toast('Camera permission was denied or no camera is available.')}}
 async function toggleShare(){if(shareStream){const cam=localStream&&localStream.getVideoTracks()[0];for(const pc of peerConnections.values()){const sender=pc.getSenders().find(x=>x.track&&x.track.kind==='video');if(sender&&cam)try{await sender.replaceTrack(cam)}catch(e){}}shareStream.getTracks().forEach(t=>t.stop());shareStream=null;$('#shareVideo').srcObject=null;$('#shareVideo').style.display='none';$('#shareBtn').textContent='🖥 Share screen';$('#mediaPreview').style.display=cameraOn?'':'none';setMeetingStatus('Screen sharing stopped.');return}if(!navigator.mediaDevices?.getDisplayMedia){toast('Screen sharing is not supported by this browser.');return}try{shareStream=await navigator.mediaDevices.getDisplayMedia({video:true});const screenTrack=shareStream.getVideoTracks()[0];for(const pc of peerConnections.values()){const sender=pc.getSenders().find(x=>x.track&&x.track.kind==='video');if(sender)await sender.replaceTrack(screenTrack)}$('#shareVideo').srcObject=shareStream;$('#shareVideo').style.display='block';$('#mediaPreview').style.display='';$('#mediaHint').textContent='Your shared screen is being sent to connected participants.';$('#shareBtn').textContent='⏹ Stop sharing';setMeetingStatus('Screen sharing started for connected participants.');screenTrack.addEventListener('ended',()=>{if(shareStream)toggleShare()})}catch(e){toast('Screen sharing cancelled or unavailable.')}}
 function showReactions(){const bar=$('#reactionBar');bar.style.display='';bar.innerHTML='<b>React:</b> '+['👍','👏','❤️','😂','🎉','🤔','✋'].map(x=>`<button class="btn g" data-emoji="${x}" style="margin:5px;padding:8px 12px">${x}</button>`).join('')+' <span id="reactionMsg" class="mut"></span>';bar.querySelectorAll('[data-emoji]').forEach(b=>b.onclick=()=>{const msg=$('#reactionMsg');msg.textContent=user.name+' reacted '+b.dataset.emoji;setMeetingStatus('You reacted '+b.dataset.emoji+'.');api('/api/rooms/'+$('#code').textContent+'/react',{emoji:b.dataset.emoji}).catch(e=>toast(e.message));toast('Reaction: '+b.dataset.emoji)})}
 function meetingNotice(text){const n=$('#meetingNotice');n.textContent=text;n.style.display='block';clearTimeout(window.__meetingNoticeTimer);window.__meetingNoticeTimer=setTimeout(()=>n.style.display='none',4200)}
@@ -364,7 +376,11 @@ function sendLine(code,text){return api('/api/rooms/'+code+'/line',{text})}
 function closeRoom(){mic=false;if(es){es.close();es=null}for(const pc of peerConnections.values()){try{pc.close()}catch(e){}}peerConnections.clear();remoteStreams.clear();if(rec){const r=rec;rec=null;try{r.stop()}catch(e){}}if(localStream)localStream.getTracks().forEach(t=>t.stop());if(shareStream)shareStream.getTracks().forEach(t=>t.stop());localStream=null;shareStream=null;cameraOn=false;$('#localVideo').srcObject=null;$('#shareVideo').srcObject=null;lobby()}
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-let qOk=0,qTot=0,pend=null,vcode='';function showDev(c){const e=$('#dc');e.style.display='block';e.textContent=API?'Email is not set up yet, so nothing was emailed. To get real codes in Gmail, double-click SETUP-AND-START.bat. Test code: '+c:'This is only a preview inside Claude and it cannot send email. Real codes in Gmail work only in the downloaded app (SETUP-AND-START.bat). Test code: '+c;$('#cd').value=c}
+let qOk=0,qTot=0,pend=null,vcode='';
+function showDev(c,mailSent){const e=$('#dc');e.style.display='block';e.textContent='🔑 Instant Verification Code: '+c+' (Auto-filled below — tap Verify & continue)';$('#cd').value=c}
+$('#resendBtn')?.addEventListener('click',async()=>{if(!pend?.em)return;const b=$('#resendBtn');b.disabled=true;try{const d=await api('/api/resend-code',{email:pend.em});if(d.devCode){showDev(d.devCode,d.mailSent);toast('Code ready below')}else{toast('New code emailed to '+pend.em)}}catch(e){$('#er').textContent=e.message}finally{b.disabled=false}});
+$('#instantCodeBtn')?.addEventListener('click',async()=>{if(!pend?.em)return;const b=$('#instantCodeBtn');b.disabled=true;try{const d=await api('/api/resend-code',{email:pend.em,showCode:true});if(d.devCode){showDev(d.devCode,d.mailSent);toast('Instant verification code generated!')}}catch(e){$('#er').textContent=e.message}finally{b.disabled=false}});
+$('#backAuthBtn')?.addEventListener('click',()=>{$('#vf').style.display='none';$('#dc').style.display='none';$('#go').style.display='';$('#er').textContent=''});
 const DISP=['mailinator.com','tempmail.com','10minutemail.com','guerrillamail.com','yopmail.com','trashmail.com'];
 function chk(em){const m=/^[^\s@]+@([^\s@]+\.[a-z]{2,})$/i.exec(em);if(!m)return{ok:0,msg:'Enter a valid email.'};const d=m[1].toLowerCase();if(DISP.includes(d))return{ok:0,msg:'Temporary email domains are not allowed.'};return{ok:1,col:/\.(edu|ac)(\.[a-z]{2})?$/.test(d)}}
 $('#em').oninput=()=>{const v=$('#em').value.trim(),r=chk(v);$('#eh').textContent=!v?'':!r.ok?'⚠ '+r.msg:r.col?'🎓 College email detected':'✓ Format OK – a code will confirm it exists'};

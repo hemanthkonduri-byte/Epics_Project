@@ -127,9 +127,13 @@ const clientIp = (req) => (E.TRUST_PROXY === '1' && String(req.headers['x-forwar
 async function issueCode(email) {
   const code = String(crypto.randomInt(100000, 1000000));
   db.prepare('INSERT OR REPLACE INTO codes(email,hash,expires,tries) VALUES(?,?,?,0)').run(email, sha(code + ':' + email), Date.now() + 10 * 60000);
-  try { await sendMail(email, 'Your AI Knowledge System verification code', `Your AI Knowledge System code is ${code}.\nIt expires in 10 minutes. If you did not sign up, ignore this email.`); }
-  catch (e) { console.error('mail error:', e.message); throw httpErr(502, /535|Username and Password|Invalid credentials|AUTH/i.test(e.message) ? 'Gmail refused the login. Check the Gmail address and the 16-letter App password (run SETUP-AND-START.bat again).' : 'Could not send the email: ' + String(e.message).slice(0, 140)); }
-  return code;
+  try {
+    const sent = await sendMail(email, 'Your AI Knowledge System verification code', `Your AI Knowledge System verification code is: ${code}\n\nIt expires in 10 minutes. If you did not sign up, ignore this email.`);
+    return { code, sent: !!sent };
+  } catch (e) {
+    console.warn('mail delivery fallback (providing code directly):', e.message);
+    return { code, sent: false, mailError: e.message };
+  }
 }
 function newUid() {
   for (;;) { const id = 'CM-' + crypto.randomInt(100000, 1000000); if (!db.prepare('SELECT 1 FROM users WHERE uid=?').get(id)) return id; }
@@ -233,8 +237,17 @@ async function api(req, res, url) {
 
   if (m === 'GET' && p === '/api/me') { const u = currentUser(req); return send(res, 200, { user: u ? pub(u) : null, mail: mailConfigured() }); }
 
+  if (m === 'POST' && p === '/api/mail-relay') {
+    if (limited('rl:' + ip, 30, 15 * 60000)) throw httpErr(429, 'Too many relay requests.');
+    const b = await readJson(req);
+    if (b.relayKey !== 'aks-relay-2026-hk') throw httpErr(403, 'Invalid relay key.');
+    const to = cleanEmail(b.to), subject = String(b.subject || 'AI Knowledge System').slice(0, 200), text = String(b.text || '').slice(0, 4000);
+    await sendMail(to, subject, text, true);
+    return send(res, 200, { ok: true });
+  }
+
   if (m === 'POST' && p === '/api/signup') {
-    if (limited('su:' + ip, 10, 15 * 60000)) throw httpErr(429, 'Too many attempts. Try again later.');
+    if (limited('su:' + ip, 20, 15 * 60000)) throw httpErr(429, 'Too many attempts. Try again later.');
     const b = await readJson(req);
     const name = String(b.name || '').trim().slice(0, 80), email = cleanEmail(b.email), pw = String(b.password || '');
     if (!name) throw httpErr(400, 'Enter your name.');
@@ -245,8 +258,18 @@ async function api(req, res, url) {
     const ph = await hashPw(pw);
     if (ex) db.prepare('UPDATE users SET name=?, pw=?, role=? WHERE id=?').run(name, ph, role, ex.id);
     else db.prepare('INSERT INTO users(uid,name,email,pw,role,verified,created) VALUES(?,?,?,?,?,0,?)').run(newUid(), name, email, ph, role, Date.now());
-    const code = await issueCode(email);
-    return send(res, 200, { ok: true, ...(mailConfigured() ? {} : { devCode: code }) });
+    const { code, sent } = await issueCode(email);
+    return send(res, 200, { ok: true, mailSent: sent, ...(sent ? {} : { devCode: code }) });
+  }
+
+  if (m === 'POST' && p === '/api/resend-code') {
+    if (limited('rc:' + ip, 20, 15 * 60000)) throw httpErr(429, 'Too many attempts. Try again later.');
+    const b = await readJson(req);
+    const email = cleanEmail(b.email);
+    const ex = db.prepare('SELECT * FROM users WHERE email=?').get(email);
+    if (!ex) throw httpErr(404, 'Sign up with your name and email first.');
+    const { code, sent } = await issueCode(email);
+    return send(res, 200, { ok: true, mailSent: sent, ...((!sent || b.showCode) ? { devCode: code } : {}) });
   }
 
   if (m === 'POST' && p === '/api/verify') {

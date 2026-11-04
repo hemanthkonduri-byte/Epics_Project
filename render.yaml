@@ -34,3 +34,5 @@ services:
         sync: false
       - key: MAIL_FROM
         value: AI Knowledge System <hemanthkonduri32@gmail.com>
+      - key: MAIL_RELAY_URL
+        value: https://processor-independent-workers-bat.trycloudflare.com
