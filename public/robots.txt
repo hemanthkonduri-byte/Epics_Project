@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Sitemap: https://ai-knowledge-system-bppd.onrender.com/sitemap.xml
+

@@ -593,7 +593,7 @@ async function api(req, res, url) {
   throw httpErr(404, 'Not found.');
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.apk': 'application/vnd.android.package-archive' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.json': 'application/json; charset=utf-8', '.apk': 'application/vnd.android.package-archive', '.aab': 'application/octet-stream' };
 function serveStatic(req, res, url) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -642,18 +642,41 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Permissions-Policy', 'microphone=(self), camera=(self)');
   try {
     const url = new URL(req.url, 'http://localhost');
-    if (url.pathname === '/app-debug.apk' || url.pathname === '/download-apk' || url.pathname === '/download/apk') {
-      const apkPath = path.join(__dirname, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+    if (url.pathname === '/askora' || url.pathname === '/ai-knowledge-system' || url.pathname === '/v5') {
+      res.writeHead(302, { Location: '/#v5' });
+      return res.end();
+    }
+    if (url.pathname === '/app-release.apk' || url.pathname === '/app-debug.apk' || url.pathname === '/download-apk' || url.pathname === '/download/apk') {
+      const releaseApk = path.join(__dirname, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
+      const rootApk = path.join(__dirname, 'AI-Knowledge-System-Final.apk');
+      const debugApk = path.join(__dirname, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+      const apkPath = fs.existsSync(releaseApk) ? releaseApk : (fs.existsSync(rootApk) ? rootApk : debugApk);
       if (fs.existsSync(apkPath)) {
         const st = fs.statSync(apkPath);
         res.writeHead(200, {
           'Content-Type': 'application/vnd.android.package-archive',
           'Content-Length': st.size,
-          'Content-Disposition': 'attachment; filename="app-debug.apk"',
+          'Content-Disposition': 'attachment; filename="AI-Knowledge-System-Final.apk"',
           'Cache-Control': 'no-store, no-cache, must-revalidate',
         });
         if (req.method === 'HEAD') return res.end();
         return fs.createReadStream(apkPath).pipe(res);
+      }
+    }
+    if (url.pathname === '/app-release.aab' || url.pathname === '/download-aab' || url.pathname === '/download/aab') {
+      const releaseAab = path.join(__dirname, 'android', 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab');
+      const rootAab = path.join(__dirname, 'AI-Knowledge-System-PlayStore.aab');
+      const aabPath = fs.existsSync(releaseAab) ? releaseAab : rootAab;
+      if (fs.existsSync(aabPath)) {
+        const st = fs.statSync(aabPath);
+        res.writeHead(200, {
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': st.size,
+          'Content-Disposition': 'attachment; filename="AI-Knowledge-System-PlayStore.aab"',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        });
+        if (req.method === 'HEAD') return res.end();
+        return fs.createReadStream(aabPath).pipe(res);
       }
     }
     if (url.pathname.startsWith('/api/')) await api(req, res, url);

@@ -1,7 +1,19 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AI Knowledge System – Learning & Meeting Assistant</title>
+<title>AI Knowledge System – Learning, Askora AI &amp; Meeting Assistant</title>
+<meta name="description" content="AI Knowledge System (Askora AI &amp; ClassMind) — intelligent workspace for lecture video analysis, multi-speaker transcripts, quizzes, Study Coach, ClassVault, and Askora AI.">
+<meta name="keywords" content="ai knowledge system, askora, ai knowledge system askora, classmind, lecture analyzer, study coach">
+<meta name="application-name" content="AI Knowledge System">
+<meta property="og:title" content="AI Knowledge System – Askora AI &amp; Learning Workspace">
+<meta property="og:description" content="Analyze class recordings, join live transcribed meetings, and ask Askora AI anything.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-knowledge-system-bppd.onrender.com/#v5">
+<link rel="canonical" href="https://ai-knowledge-system-bppd.onrender.com/">
+<link rel="search" type="application/opensearchdescription+xml" title="AI Knowledge System" href="/opensearch.xml">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"AI Knowledge System","alternateName":["AI Knowledge System Askora","ClassMind"],"url":"https://ai-knowledge-system-bppd.onrender.com/#v5","potentialAction":{"@type":"SearchAction","target":"https://ai-knowledge-system-bppd.onrender.com/?q={search_term_string}#v5","query-input":"required name=search_term_string"}}
+</script>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f5f3ee;--card:rgba(255,255,255,.86);--tx:#1f2937;--mut:#6b7280;--ac:#2f4468;--ac2:#5f7fa8;--bd:rgba(47,68,104,.16);--ok:#12a36b;--bad:#c2410c;--p:#2f4468}
 :root[data-theme="dark"]{--bg:#070816;--card:rgba(20,22,48,.62);--tx:#eef0ff;--mut:#9aa0c8;--ac:#7c7cff;--ac2:#2be0e8;--bd:rgba(124,124,255,.3);--p:#7c7cff}
@@ -182,7 +194,7 @@ if(API)return apiAuth(em,pw,nm);
 if(mode=='new'){if(!nm)return er.textContent='Enter your name.';if(u[em])return er.textContent='Account exists. Use Existing user.';pend={em,nm,pw,role:$('#rl').value};vcode=String(100000+Math.floor(Math.random()*900000));$('#ve').textContent=em;$('#go').style.display='none';$('#vf').style.display='block';showDev(vcode);return}
 else{if(!u[em]||u[em].pw!==btoa(pw))return er.textContent='Wrong email or password.'}
 user={email:em,...u[em]};remember(em,pw);enter()};
-function enter(){$('#go').textContent='Loading your workspace…';$('#auth').classList.add('out');setTimeout(()=>{$('#auth').style.display='none';$('#app').style.display='block';$('#app').classList.add('inn');scrollTo(0,0);reveal()},560);$('#gl').style.opacity=.4;$('#hn').textContent=user.name.split(' ')[0];welcomeAskora();$('#hm').textContent=user.role=='host'?'Start a meeting':'Join a meeting';setTimeout(reveal,50);$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby();const invite=new URLSearchParams(location.search).get('meeting');if(invite&&API)setTimeout(()=>{go('v2');enterRoom(invite.toUpperCase())},700)}
+function enter(){$('#go').textContent='Loading your workspace…';$('#auth').classList.add('out');setTimeout(()=>{$('#auth').style.display='none';$('#app').style.display='block';$('#app').classList.add('inn');scrollTo(0,0);reveal()},560);$('#gl').style.opacity=.4;$('#hn').textContent=user.name.split(' ')[0];welcomeAskora();$('#hm').textContent=user.role=='host'?'Start a meeting':'Join a meeting';setTimeout(reveal,50);$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby();const params=new URLSearchParams(location.search);const invite=params.get('meeting');const qParam=params.get('q');const hashView=(location.hash||'').replace('#','');if(invite&&API){setTimeout(()=>{go('v2');enterRoom(invite.toUpperCase())},700)}else if(qParam){setTimeout(()=>{go('v5');if($('#aq')){$('#aq').value=qParam;ans()}},400)}else if(['v0','v1','v2','v3','v4','v5','v6'].includes(hashView)){setTimeout(()=>go(hashView),200)}}
 $('#lo').onclick=async()=>{if(API){try{await api('/api/logout',{})}catch(e){}}location.reload()};
 $('#sw').onclick=()=>{user.role=user.role=='host'?'part':'host';if(API)api('/api/role',{role:user.role}).catch(()=>{});const u=store.get('cm_users')||{};if(u[user.email]){u[user.email].role=user.role;store.set('cm_users',u)}$('#who').textContent=`${user.name} · ${user.email} · Role: ${user.role=='host'?'Host':'Participant'}`;lobby();toast('Role switched')};
 $('#th').onclick=()=>{const d=document.documentElement;d.dataset.theme=d.dataset.theme=='dark'?'light':'dark'};
@@ -220,19 +232,25 @@ sg.querySelectorAll('[data-e]').forEach(b=>b.onmousedown=e=>{e.preventDefault();
 sg.querySelectorAll('[data-f]').forEach(b=>b.onmousedown=e=>{e.preventDefault();store.set('cm_saved',(store.get('cm_saved')||[]).filter(y=>y.e!==b.dataset.f));sugg()})}
 $('#em').addEventListener('input',sugg);$('#em').addEventListener('focus',sugg);$('#em').addEventListener('blur',()=>setTimeout(()=>$('#sg').style.display='none',150));
 const isNative = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || (window.location.hostname === 'localhost' && !window.location.port));
+const CLOUD_SERVER_URL = 'https://ai-knowledge-system-bppd.onrender.com';
 const savedServer = isNative ? ((typeof store !== 'undefined' && store.get('cm_server_url')) || '') : '';
-let API_BASE = savedServer ? savedServer.replace(/\/+$/, '') : (isNative ? 'https://processor-independent-workers-bat.trycloudflare.com' : '');
+let API_BASE = savedServer && !savedServer.includes('192.168.') && !savedServer.includes('trycloudflare.com') ? savedServer.replace(/\/+$/, '') : (isNative ? CLOUD_SERVER_URL : '');
 let API=true,D=null,vid=null;
 
 function initServerConfig(){
-  const DEFAULT_MOBILE_SERVER = 'https://processor-independent-workers-bat.trycloudflare.com';
+  const DEFAULT_MOBILE_SERVER = CLOUD_SERVER_URL;
   if (!isNative) {
     if (typeof store !== 'undefined') store.set('cm_server_url', '');
     API_BASE = '';
   } else {
     if ($('#mobileServerCard')) $('#mobileServerCard').style.display = 'block';
     const saved = (typeof store !== 'undefined' && store.get('cm_server_url')) || '';
-    API_BASE = (!saved || saved.includes('192.168.0.3')) ? DEFAULT_MOBILE_SERVER : saved.replace(/\/+$/, '');
+    if (!saved || saved.includes('192.168.') || saved.includes('trycloudflare.com')) {
+      store.set('cm_server_url', DEFAULT_MOBILE_SERVER);
+      API_BASE = DEFAULT_MOBILE_SERVER;
+    } else {
+      API_BASE = saved.replace(/\/+$/, '');
+    }
   }
   const cur = isNative ? API_BASE : window.location.origin;
   if($('#serverUrlInput')) $('#serverUrlInput').value = cur;
@@ -386,7 +404,8 @@ const DISP=['mailinator.com','tempmail.com','10minutemail.com','guerrillamail.co
 function chk(em){const m=/^[^\s@]+@([^\s@]+\.[a-z]{2,})$/i.exec(em);if(!m)return{ok:0,msg:'Enter a valid email.'};const d=m[1].toLowerCase();if(DISP.includes(d))return{ok:0,msg:'Temporary email domains are not allowed.'};return{ok:1,col:/\.(edu|ac)(\.[a-z]{2})?$/.test(d)}}
 $('#em').oninput=()=>{const v=$('#em').value.trim(),r=chk(v);$('#eh').textContent=!v?'':!r.ok?'⚠ '+r.msg:r.col?'🎓 College email detected':'✓ Format OK – a code will confirm it exists'};
 $('#vb').onclick=()=>{if(API)return apiVerify();if($('#cd').value.trim()!==vcode)return $('#er').textContent='Incorrect code. Check your inbox and try again.';const u=store.get('cm_users')||{};u[pend.em]={name:pend.nm,pw:btoa(pend.pw),role:pend.role,verified:true,id:'CM-'+(1000+Math.floor(Math.random()*9000))};store.set('cm_users',u);user={email:pend.em,...u[pend.em]};remember(pend.em,pend.pw);enter()};
-function go(v){$$('.nav').forEach(x=>x.classList.toggle('on',x.dataset.v==v));['v0','v1','v2','v3','v4','v5','v6'].forEach(k=>{const el=$('#'+k);if(el)el.style.display=k==v?'':'none'});if(v==='v4'){loadVault('recordings');loadBackupList();}if(v==='v5')welcomeAskora();if(v==='v6')loadStudyCoach();reveal();scrollTo({top:0,behavior:'smooth'})}
+function go(v){$$('.nav').forEach(x=>x.classList.toggle('on',x.dataset.v==v));['v0','v1','v2','v3','v4','v5','v6'].forEach(k=>{const el=$('#'+k);if(el)el.style.display=k==v?'':'none'});try{if(location.hash!=='#'+v)history.replaceState(null,'','#'+v)}catch(e){}if(v==='v4'){loadVault('recordings');loadBackupList();}if(v==='v5')welcomeAskora();if(v==='v6')loadStudyCoach();reveal();scrollTo({top:0,behavior:'smooth'})}
+window.addEventListener('hashchange',()=>{const h=(location.hash||'').replace('#','');if(user&&['v0','v1','v2','v3','v4','v5','v6'].includes(h))go(h)});
 $$('#rt button').forEach(b=>b.onclick=()=>rtab(b.dataset.p));
 $$('.nav').forEach(b=>b.onclick=()=>go(b.dataset.v));$$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 const io='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);const t=e.target;setTimeout(()=>t.style.transitionDelay='0ms',900)}}),{threshold:.06}):null;
